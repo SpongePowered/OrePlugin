@@ -5,21 +5,22 @@ import org.spongepowered.api.Game;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.game.state.GameStartedServerEvent;
 import org.spongepowered.api.plugin.Plugin;
+import org.spongepowered.ore.client.OreClient;
 
 import javax.inject.Inject;
 
 @Plugin(id = "ore",
-        name = "Ore",
+        name = "OrePlugin",
         version = "1.0.0",
         description = "Official package manager for Sponge.",
         authors = { "windy" }
 )
-public final class Ore {
+public final class OrePlugin {
 
     @Inject public Logger log;
     @Inject public Game game;
 
-    private final OreAPI api = new OreAPI("http://localhost:9000");
+    private final OreClient client = new OreClient("http://localhost:9000");
 
     @Listener
     public void onStart(GameStartedServerEvent event) {
@@ -28,8 +29,8 @@ public final class Ore {
         this.log.info("Done.");
     }
 
-    public OreAPI getApi() {
-        return this.api;
+    public OreClient getClient() {
+        return this.client;
     }
 
 }

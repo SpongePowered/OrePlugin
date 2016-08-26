@@ -1,6 +1,9 @@
 package org.spongepowered.ore;
 
+import static org.spongepowered.ore.client.OreClient.VERSION_RECOMMENDED;
+
 import org.spongepowered.api.Sponge;
+import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
@@ -13,13 +16,16 @@ import java.nio.file.Paths;
 
 public final class Commands {
 
-    private final Ore plugin;
-    private final Path downloadsPath = Paths.get("./updates");
+    private final OrePlugin plugin;
+    private final Path installDir = Paths.get("./mods");
 
     private final CommandSpec install = CommandSpec.builder()
             .permission("ore.install")
             .description(Text.of("Installs a new plugin."))
-            .arguments(GenericArguments.onlyOne(GenericArguments.string(Text.of("pluginId"))))
+            .arguments(
+                GenericArguments.onlyOne(GenericArguments.string(Text.of("pluginId"))),
+                GenericArguments.optional(GenericArguments.onlyOne(GenericArguments.string(Text.of("version"))))
+            )
             .executor(this::installPlugin)
             .build();
 
@@ -30,7 +36,7 @@ public final class Commands {
             .child(this.install, "install", "get")
             .build();
 
-    public Commands(Ore plugin) {
+    public Commands(OrePlugin plugin) {
         this.plugin = plugin;
     }
 
@@ -42,14 +48,18 @@ public final class Commands {
         return CommandResult.success();
     }
 
-    private CommandResult installPlugin(CommandSource src, CommandContext context) {
+    private CommandResult installPlugin(CommandSource src, CommandContext context) throws CommandException {
         String pluginId = context.<String>getOne("pluginId").get();
+        String version = context.<String>getOne("version").orElse(VERSION_RECOMMENDED);
+        if (Sponge.getPluginManager().isLoaded(pluginId))
+            throw new CommandException(Text.of("Plugin \"" + pluginId + "\" is already installed."));
         Sponge.getScheduler().createTaskBuilder()
                 .name("Ore Download")
                 .async()
                 .execute(() -> {
-                    this.plugin.getApi().downloadPlugin(pluginId, this.downloadsPath);
-                    src.sendMessage(Text.of("Download of " + pluginId + " complete."));
+                    this.plugin.getClient().installPlugin(pluginId, version, this.installDir);
+                    src.sendMessage(Text.of("Download of " + pluginId + " complete. Restart the server to complete "
+                        + "installation."));
                 })
                 .submit(this.plugin);
         return CommandResult.success();
