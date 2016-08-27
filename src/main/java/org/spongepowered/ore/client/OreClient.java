@@ -55,6 +55,13 @@ public interface OreClient {
     void installPlugin(String id, String version);
 
     /**
+     * Uninstalls a plugin.
+     *
+     * @param id ID of plugin to uninstall
+     */
+    void uninstallPlugin(String id);
+
+    /**
      * Downloads an update for a plugin of the specified ID.
      *
      * @param id Plugin ID
@@ -74,7 +81,7 @@ public interface OreClient {
      *
      * @return Amount of updates to apply
      */
-    int updateCount();
+    int updates();
 
     /**
      * Applies all updates that are currently pending.

@@ -4,27 +4,32 @@ import static java.nio.file.Files.copy;
 import static java.nio.file.Files.createDirectories;
 import static java.nio.file.Files.createFile;
 import static java.nio.file.Files.delete;
+import static java.nio.file.Files.deleteIfExists;
 import static java.nio.file.Files.exists;
 import static java.nio.file.Files.move;
 
 import org.apache.commons.io.FileUtils;
+import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.plugin.PluginManager;
 import org.spongepowered.plugin.meta.PluginMetadata;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public final class SpongeOreClient implements OreClient {
 
     private final PluginManager pluginManager;
     private final String rootUrl;
     private final Path modsDir, updatesDir;
-    private final Map<String, Path> installsAwaitingRestart = new HashMap<>();
-    private final Map<String, Path> updatesAwaitingRestart = new HashMap<>();
+    private final Map<String, Path> newInstalls = new HashMap<>();
+    private final Map<String, Path> updatesToInstall = new HashMap<>();
+    private final List<PluginContainer> toRemove = new ArrayList<>();
 
     public SpongeOreClient(String rootUrl, Path modsDir, Path updatesDir, PluginManager pluginManager) {
         this.rootUrl = rootUrl;
@@ -52,31 +57,37 @@ public final class SpongeOreClient implements OreClient {
     public void installPlugin(String id, String version) {
         if (this.pluginManager.isLoaded(id))
             throw new RuntimeException("Plugin \"" + id + "\" is already installed.");
-        this.downloadPlugin(id, version, this.installsAwaitingRestart, this.modsDir);
+        this.downloadPlugin(id, version, this.newInstalls, this.modsDir);
+    }
+
+    @Override
+    public void uninstallPlugin(String id) {
+        this.toRemove.add(this.pluginManager.getPlugin(id)
+            .orElseThrow(() -> new RuntimeException("Plugin \"" + id + "\" is not installed.")));
     }
 
     @Override
     public void downloadUpdate(String id, String version) {
         if (!this.pluginManager.isLoaded(id))
             throw new RuntimeException("Plugin \"" + id + "\" is not installed.");
-        this.downloadPlugin(id, version, this.updatesAwaitingRestart, this.updatesDir);
+        this.downloadPlugin(id, version, this.updatesToInstall, this.updatesDir);
     }
 
     @Override
     public boolean hasUpdates() {
-        return !this.updatesAwaitingRestart.isEmpty();
+        return !this.updatesToInstall.isEmpty();
     }
 
     @Override
-    public int updateCount() {
-        return this.updatesAwaitingRestart.size();
+    public int updates() {
+        return this.updatesToInstall.size();
     }
 
     @Override
     public void applyUpdates() {
         try {
             Map<Path, List<PluginMetadata>> installedMetadata = new PluginMetadataScanner(this.modsDir).scan();
-            for (String pluginId : this.updatesAwaitingRestart.keySet()) {
+            for (String pluginId : this.updatesToInstall.keySet()) {
                 // Delete obsolete version
                 for (Path installedPath : installedMetadata.keySet()) {
                     boolean match = installedMetadata.get(installedPath).stream()
@@ -90,7 +101,7 @@ public final class SpongeOreClient implements OreClient {
                 }
 
                 // Install new update
-                Path updatePath = this.updatesAwaitingRestart.get(pluginId);
+                Path updatePath = this.updatesToInstall.get(pluginId);
                 Path target = this.modsDir.resolve(updatePath.getFileName());
                 String fileName = target.getFileName().toString();
                 String name = fileName.substring(0, fileName.lastIndexOf('.'));
@@ -103,6 +114,40 @@ public final class SpongeOreClient implements OreClient {
             FileUtils.cleanDirectory(this.updatesDir.toFile());
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Returns true if there are uninstallations to complete.
+     *
+     * @return True if uninstallations to complete
+     */
+    public boolean hasRemovalsToFinish() {
+        return !this.toRemove.isEmpty();
+    }
+
+    /**
+     * Returns the amount of plugins to remove.
+     *
+     * @return Amount to remove
+     */
+    public int toRemove() {
+        return this.toRemove.size();
+    }
+
+    /**
+     * Deletes pending uninstallations.
+     */
+    public void finishRemovals() {
+        // Perform uninstalls
+        for (PluginContainer plugin : this.toRemove) {
+            Optional<Path> pathOpt = plugin.getSource();
+            if (pathOpt.isPresent())
+                try {
+                    deleteIfExists(pathOpt.get());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
         }
     }
 

@@ -15,6 +15,9 @@ import java.nio.file.Paths;
 
 import javax.inject.Inject;
 
+/**
+ * Main plugin class for Ore.
+ */
 @Plugin(id = "ore",
         name = "OrePlugin",
         version = "1.0.0",
@@ -30,7 +33,7 @@ public final class OrePlugin {
     @Inject public Logger log;
     @Inject public Game game;
 
-    private OreClient client;
+    private SpongeOreClient client;
 
     @Listener
     public void onStart(GameStartedServerEvent event) {
@@ -43,12 +46,23 @@ public final class OrePlugin {
     @Listener(order = Order.POST)
     public void onStop(GameStoppingEvent event) {
         if (this.client.hasUpdates()) {
-            this.log.info("Applying " + this.client.updateCount() + " updates...");
+            this.log.info("Applying " + this.client.updates() + " updates...");
             this.client.applyUpdates();
+            this.log.info("Done.");
+        }
+
+        if (this.client.hasRemovalsToFinish()) {
+            this.log.info("Uninstalling " + this.client.toRemove() + " plugins...");
+            this.client.finishRemovals();
             this.log.info("Done.");
         }
     }
 
+    /**
+     * Returns the client to use for interacting with the web API.
+     *
+     * @return Client to interact with API
+     */
     public OreClient getClient() {
         return this.client;
     }
