@@ -6,6 +6,10 @@ import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.game.state.GameStartedServerEvent;
 import org.spongepowered.api.plugin.Plugin;
 import org.spongepowered.ore.client.OreClient;
+import org.spongepowered.ore.client.SpongeOreClient;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import javax.inject.Inject;
 
@@ -17,14 +21,19 @@ import javax.inject.Inject;
 )
 public final class OrePlugin {
 
+    private static final String ROOT_URL = "http://localhost:9000";
+    private static final Path MODS_DIR = Paths.get("./mods");
+    private static final Path UPDATES_DIR = Paths.get("./updates");
+
     @Inject public Logger log;
     @Inject public Game game;
 
-    private final OreClient client = new OreClient("http://localhost:9000");
+    private OreClient client;
 
     @Listener
     public void onStart(GameStartedServerEvent event) {
         this.log.info("Initializing...");
+        this.client = new SpongeOreClient(ROOT_URL, MODS_DIR, UPDATES_DIR, this.game.getPluginManager());
         new Commands(this).register();
         this.log.info("Done.");
     }
