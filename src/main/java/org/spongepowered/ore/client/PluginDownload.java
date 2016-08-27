@@ -11,7 +11,7 @@ import java.util.Optional;
 /**
  * Represents a plugin download from the Ore server.
  */
-public class PluginDownload {
+public final class PluginDownload {
 
     private final OreClient client;
     private final String pluginId, version;

@@ -5,16 +5,20 @@ import static java.nio.file.Files.createDirectories;
 import static java.nio.file.Files.createFile;
 import static java.nio.file.Files.delete;
 import static java.nio.file.Files.exists;
+import static java.nio.file.Files.move;
 
+import org.apache.commons.io.FileUtils;
 import org.spongepowered.api.plugin.PluginManager;
+import org.spongepowered.plugin.meta.PluginMetadata;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-public class SpongeOreClient implements OreClient {
+public final class SpongeOreClient implements OreClient {
 
     private final PluginManager pluginManager;
     private final String rootUrl;
@@ -52,10 +56,54 @@ public class SpongeOreClient implements OreClient {
     }
 
     @Override
-    public void updatePlugin(String id, String version) {
+    public void downloadUpdate(String id, String version) {
         if (!this.pluginManager.isLoaded(id))
             throw new RuntimeException("Plugin \"" + id + "\" is not installed.");
         this.downloadPlugin(id, version, this.updatesAwaitingRestart, this.updatesDir);
+    }
+
+    @Override
+    public boolean hasUpdates() {
+        return !this.updatesAwaitingRestart.isEmpty();
+    }
+
+    @Override
+    public int updateCount() {
+        return this.updatesAwaitingRestart.size();
+    }
+
+    @Override
+    public void applyUpdates() {
+        try {
+            Map<Path, List<PluginMetadata>> installedMetadata = new PluginMetadataScanner(this.modsDir).scan();
+            for (String pluginId : this.updatesAwaitingRestart.keySet()) {
+                // Delete obsolete version
+                for (Path installedPath : installedMetadata.keySet()) {
+                    boolean match = installedMetadata.get(installedPath).stream()
+                        .filter(meta -> meta.getId().equals(pluginId))
+                        .findAny()
+                        .isPresent();
+                    if (match) {
+                        delete(installedPath);
+                        break;
+                    }
+                }
+
+                // Install new update
+                Path updatePath = this.updatesAwaitingRestart.get(pluginId);
+                Path target = this.modsDir.resolve(updatePath.getFileName());
+                String fileName = target.getFileName().toString();
+                String name = fileName.substring(0, fileName.lastIndexOf('.'));
+                target = findAvailablePath(name, target);
+
+                createDirectories(this.modsDir);
+                move(updatePath, target);
+            }
+
+            FileUtils.cleanDirectory(this.updatesDir.toFile());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void downloadPlugin(String id, String version, Map<String, Path> awaitingRestart, Path targetDir) {
@@ -70,9 +118,7 @@ public class SpongeOreClient implements OreClient {
 
             // Find available name
             Path target = targetDir.resolve(download.getFileName().get());
-            int conflicts = 0;
-            while (exists(target))
-                target = targetDir.resolve(download.getName().get() + " (" + ++conflicts + ").jar");
+            target = findAvailablePath(download.getName().get(), target);
 
             // Create file
             createDirectories(target.getParent());
@@ -84,6 +130,13 @@ public class SpongeOreClient implements OreClient {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private Path findAvailablePath(String name, Path target) {
+        int conflicts = 0;
+        while (exists(target))
+            target = target.getParent().resolve(name + " (" + ++conflicts + ").jar");
+        return target;
     }
 
 }

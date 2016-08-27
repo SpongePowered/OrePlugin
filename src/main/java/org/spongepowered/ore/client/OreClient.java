@@ -60,6 +60,25 @@ public interface OreClient {
      * @param id Plugin ID
      * @param version Plugin version
      */
-    void updatePlugin(String id, String version);
+    void downloadUpdate(String id, String version);
+
+    /**
+     * Returns true if there are any updates to apply.
+     *
+     * @return True if there are updates to apply
+     */
+    boolean hasUpdates();
+
+    /**
+     * Returns the amount of updates there are to apply.
+     *
+     * @return Amount of updates to apply
+     */
+    int updateCount();
+
+    /**
+     * Applies all updates that are currently pending.
+     */
+    void applyUpdates();
 
 }

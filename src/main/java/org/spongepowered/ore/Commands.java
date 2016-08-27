@@ -87,7 +87,7 @@ public final class Commands {
         if (!this.pluginManager.isLoaded(pluginId))
             throw new CommandException(Text.of("Plugin \"" + pluginId + "\" is not installed."));
         newDownloadTask(() -> {
-            this.plugin.getClient().updatePlugin(pluginId, version);
+            this.plugin.getClient().downloadUpdate(pluginId, version);
             src.sendMessage(Text.of("Download of update for " + pluginId + " complete. Restart the server to complete "
                 + "update."));
         });
