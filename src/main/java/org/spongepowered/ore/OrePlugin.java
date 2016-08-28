@@ -10,6 +10,8 @@ import org.spongepowered.api.plugin.Plugin;
 import org.spongepowered.ore.client.OreClient;
 import org.spongepowered.ore.client.SpongeOreClient;
 
+import java.io.IOException;
+import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -36,7 +38,7 @@ public final class OrePlugin {
     private SpongeOreClient client;
 
     @Listener
-    public void onStart(GameStartedServerEvent event) {
+    public void onStart(GameStartedServerEvent event) throws MalformedURLException {
         this.log.info("Initializing...");
         this.client = new SpongeOreClient(ROOT_URL, MODS_DIR, UPDATES_DIR, this.game.getPluginManager());
         new Commands(this).register();
@@ -44,9 +46,9 @@ public final class OrePlugin {
     }
 
     @Listener(order = Order.POST)
-    public void onStop(GameStoppingEvent event) {
+    public void onStop(GameStoppingEvent event) throws IOException {
         if (this.client.hasUpdates()) {
-            this.log.info("Applying " + this.client.updates() + " updates...");
+            this.log.info("Applying " + this.client.getUpdates() + " updates...");
             this.client.applyUpdates();
             this.log.info("Done.");
         }

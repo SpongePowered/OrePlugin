@@ -1,19 +1,18 @@
-package org.spongepowered.ore.client;
+package org.spongepowered.ore.client.http;
 
 import static org.spongepowered.ore.client.Routes.DOWNLOAD;
 
+import org.spongepowered.ore.client.OreClient;
+
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.Optional;
 
 /**
  * Represents a plugin download from the Ore server.
  */
-public final class PluginDownload {
+public final class PluginDownload extends ApiCall {
 
-    private final OreClient client;
     private final String pluginId, version;
     private String name;
     private InputStream in;
@@ -26,7 +25,7 @@ public final class PluginDownload {
      * @param version Version of plugin to download
      */
     public PluginDownload(OreClient client, String pluginId, String version) {
-        this.client = client;
+        super(client, DOWNLOAD, pluginId, version);
         this.pluginId = pluginId;
         this.version = version;
     }
@@ -85,19 +84,14 @@ public final class PluginDownload {
      * @throws IOException
      */
     public void openConnection() throws IOException {
-        // Establish connection
-        URL url = new URL(this.client.getRouteUrl(DOWNLOAD, this.pluginId, this.version));
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-
+        super.openConnection();
         // Get name for file
-        String contentDisposition = conn.getHeaderField("Content-Disposition");
+        String contentDisposition = this.http.getHeaderField("Content-Disposition");
         this.name = this.pluginId;
         if (contentDisposition != null) {
             String section = contentDisposition.split(";")[1];
             this.name = section.substring(section.indexOf('"') + 1, section.lastIndexOf('.'));
         }
-
-        this.in = conn.getInputStream();
     }
 
 }

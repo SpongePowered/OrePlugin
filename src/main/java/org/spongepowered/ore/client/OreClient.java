@@ -1,6 +1,14 @@
 package org.spongepowered.ore.client;
 
+import org.spongepowered.ore.client.http.HttpUtils;
+import org.spongepowered.ore.model.Project;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.Path;
+import java.util.List;
 
 /**
  * A client for interacting with the OrePlugin web server.
@@ -17,7 +25,24 @@ public interface OreClient {
      *
      * @return Root URL
      */
-    String getRootUrl();
+    URL getRootUrl();
+
+    /**
+     * Returns the full URL of the specified route.
+     *
+     * @param route OrePlugin route
+     * @param queryString Query string to append to URL
+     * @param params Format parameters
+     * @return Full URL
+     */
+    default URL getRouteUrl(String route, String queryString, Object... params) {
+        try {
+            return new URL(getRootUrl() + String.format(route, params)
+                + HttpUtils.encodeQueryStringParameters(queryString));
+        } catch (MalformedURLException | UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     /**
      * Returns the full URL of the specified route.
@@ -26,8 +51,8 @@ public interface OreClient {
      * @param params Format parameters
      * @return Full URL
      */
-    default String getRouteUrl(String route, Object... params) {
-        return getRootUrl() + String.format(route, params);
+    default URL getRouteUrl(String route, Object... params) {
+        return getRouteUrl(route, "", params);
     }
 
     /**
@@ -81,11 +106,19 @@ public interface OreClient {
      *
      * @return Amount of updates to apply
      */
-    int updates();
+    int getUpdates();
 
     /**
      * Applies all updates that are currently pending.
      */
-    void applyUpdates();
+    void applyUpdates() throws IOException;
+
+    /**
+     * Searches for {@link Project}s based on the given query.
+     *
+     * @param query Query for search
+     * @return List of projects matching query
+     */
+    List<Project> searchProjects(String query) throws IOException;
 
 }
