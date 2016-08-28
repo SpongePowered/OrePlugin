@@ -5,11 +5,11 @@ import static org.spongepowered.api.command.args.GenericArguments.optional;
 import static org.spongepowered.api.command.args.GenericArguments.remainingJoinedStrings;
 import static org.spongepowered.api.command.args.GenericArguments.string;
 import static org.spongepowered.api.text.Text.of;
-import static org.spongepowered.ore.text.Messages.DESCRIPTION_INSTALL;
-import static org.spongepowered.ore.text.Messages.DESCRIPTION_SEARCH;
-import static org.spongepowered.ore.text.Messages.DESCRIPTION_UNINSTALL;
-import static org.spongepowered.ore.text.Messages.DESCRIPTION_UPDATE;
-import static org.spongepowered.ore.text.Messages.DESCRIPTION_VERSION;
+import static org.spongepowered.ore.Messages.DESCRIPTION_INSTALL;
+import static org.spongepowered.ore.Messages.DESCRIPTION_SEARCH;
+import static org.spongepowered.ore.Messages.DESCRIPTION_UNINSTALL;
+import static org.spongepowered.ore.Messages.DESCRIPTION_UPDATE;
+import static org.spongepowered.ore.Messages.DESCRIPTION_VERSION;
 
 import org.spongepowered.api.command.spec.CommandSpec;
 

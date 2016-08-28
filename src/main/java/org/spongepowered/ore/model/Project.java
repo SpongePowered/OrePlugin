@@ -7,7 +7,10 @@ import com.google.common.base.Objects;
 import com.google.gson.annotations.SerializedName;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.TextRepresentable;
+import org.spongepowered.ore.client.OreClient;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.List;
 
 /**
@@ -84,6 +87,20 @@ public final class Project implements TextRepresentable {
      */
     public String getHomepage() {
         return this.homepage;
+    }
+
+    /**
+     * Returns the homepage URL for the specified {@link OreClient}.
+     *
+     * @param client Ore client to use
+     * @return Homepage URL
+     */
+    public URL getHomepageUrl(OreClient client) {
+        try {
+            return new URL(client.getRootUrl().toString() + this.homepage);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**

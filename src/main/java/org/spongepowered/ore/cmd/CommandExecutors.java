@@ -1,23 +1,25 @@
 package org.spongepowered.ore.cmd;
 
 import static org.spongepowered.api.text.Text.of;
+import static org.spongepowered.api.text.format.TextColors.BLUE;
 import static org.spongepowered.api.text.format.TextColors.YELLOW;
+import static org.spongepowered.ore.Messages.DOWNLOAD_RESTART_SERVER;
+import static org.spongepowered.ore.Messages.INSTALLING;
+import static org.spongepowered.ore.Messages.REMOVAL;
+import static org.spongepowered.ore.Messages.SEARCHING;
+import static org.spongepowered.ore.Messages.UPDATING;
+import static org.spongepowered.ore.Messages.tuplePid;
 import static org.spongepowered.ore.client.SpongeOreClient.VERSION_RECOMMENDED;
-import static org.spongepowered.ore.text.Messages.DOWNLOAD_RESTART_SERVER;
-import static org.spongepowered.ore.text.Messages.REMOVAL;
-import static org.spongepowered.ore.text.TextUtils.tuplePid;
 
 import com.google.common.collect.ImmutableMap;
 import org.spongepowered.api.Game;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
-import org.spongepowered.api.scheduler.Task;
 import org.spongepowered.api.service.pagination.PaginationList;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.ore.OrePlugin;
 import org.spongepowered.ore.client.OreClient;
-import org.spongepowered.ore.text.TextUtils;
 
 import java.util.stream.Collectors;
 
@@ -26,9 +28,8 @@ import java.util.stream.Collectors;
  */
 public final class CommandExecutors {
 
-    private static final String TASK_NAME_DOWNLOAD = "Ore Download";
-    private static final String TASK_NAME_SEARCH = "Ore Search";
-
+    public static final String TASK_NAME_DOWNLOAD = "Ore Download";
+    public static final String TASK_NAME_SEARCH = "Ore Search";
     private final OrePlugin plugin;
     private final OreClient client;
     private final Game game;
@@ -72,7 +73,8 @@ public final class CommandExecutors {
     public CommandResult installPlugin(CommandSource src, CommandContext context) {
         String pluginId = context.<String>getOne("pluginId").get();
         String version = context.<String>getOne("version").orElse(VERSION_RECOMMENDED);
-        newAsyncTask(TASK_NAME_DOWNLOAD, src, () -> {
+        this.plugin.newAsyncTask(TASK_NAME_DOWNLOAD, src, () -> {
+            src.sendMessage(INSTALLING.apply(tuplePid(pluginId)).build());
             this.client.installPlugin(pluginId, version);
             src.sendMessage(DOWNLOAD_RESTART_SERVER.apply(ImmutableMap.of("pluginId", of(pluginId), "phase",
                 of("installation"))).build());
@@ -108,10 +110,12 @@ public final class CommandExecutors {
     public CommandResult updatePlugin(CommandSource src, CommandContext context) {
         String pluginId = context.<String>getOne("pluginId").get();
         String version = context.<String>getOne("version").orElse(VERSION_RECOMMENDED);
-        newAsyncTask(TASK_NAME_DOWNLOAD, src, () -> {
+        this.plugin.newAsyncTask(TASK_NAME_DOWNLOAD, src, () -> {
+            src.sendMessage(UPDATING.apply(tuplePid(pluginId)).build());
             this.client.downloadUpdate(pluginId, version);
-            src.sendMessage(DOWNLOAD_RESTART_SERVER.apply(ImmutableMap.of("pluginId", of(pluginId), "phase",
-                of("update"))).build());
+            src.sendMessage(DOWNLOAD_RESTART_SERVER.apply(ImmutableMap.of(
+                "pluginId", of(pluginId),
+                "phase", of("update"))).build());
             return null;
         });
         return CommandResult.success();
@@ -126,25 +130,19 @@ public final class CommandExecutors {
      */
     public CommandResult searchForPlugins(CommandSource src, CommandContext context) {
         String query = context.<String>getOne("query").get();
-        newAsyncTask(TASK_NAME_SEARCH, src, () -> {
+        this.plugin.newAsyncTask(TASK_NAME_SEARCH, src, () -> {
+            src.sendMessage(SEARCHING.apply().build());
             PaginationList.builder()
                 .title(of(YELLOW, TASK_NAME_SEARCH))
+                .padding(of(BLUE, '-'))
                 .contents(this.client.searchProjects(query).stream()
                     .<Text>map(project -> ((CommandTry<Text>) () ->
-                        TextUtils.getProjectListItem(this.client, project)).callFor(src))
+                        ProjectListItem.of(this.plugin, project).toText()).callFor(src))
                     .collect(Collectors.toList()))
                 .sendTo(src);
             return null;
         });
         return CommandResult.success();
-    }
-
-    private Task newAsyncTask(String name, CommandSource src, CommandTry callable) {
-        return this.game.getScheduler().createTaskBuilder()
-            .name(name)
-            .async()
-            .execute(() -> callable.callFor(src))
-            .submit(this.plugin);
     }
 
 }

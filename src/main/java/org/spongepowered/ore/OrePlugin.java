@@ -2,14 +2,17 @@ package org.spongepowered.ore;
 
 import org.slf4j.Logger;
 import org.spongepowered.api.Game;
+import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.Order;
 import org.spongepowered.api.event.game.state.GameStartedServerEvent;
 import org.spongepowered.api.event.game.state.GameStoppingEvent;
 import org.spongepowered.api.plugin.Plugin;
+import org.spongepowered.api.scheduler.Task;
 import org.spongepowered.ore.client.OreClient;
 import org.spongepowered.ore.client.SpongeOreClient;
 import org.spongepowered.ore.cmd.CommandExecutors;
+import org.spongepowered.ore.cmd.CommandTry;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -68,6 +71,14 @@ public final class OrePlugin {
      */
     public OreClient getClient() {
         return this.client;
+    }
+
+    public Task newAsyncTask(String name, CommandSource src, CommandTry callable) {
+        return this.game.getScheduler().createTaskBuilder()
+            .name(name)
+            .async()
+            .execute(() -> callable.callFor(src))
+            .submit(this);
     }
 
 }

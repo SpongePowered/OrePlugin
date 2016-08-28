@@ -21,4 +21,5 @@ public interface CommandTry<V> extends Callable<V> {
         }
     }
 
+
 }
