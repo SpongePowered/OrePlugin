@@ -12,7 +12,7 @@ import static org.spongepowered.ore.client.Routes.PROJECT_LIST;
 import org.apache.commons.io.FileUtils;
 import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.plugin.PluginManager;
-import org.spongepowered.ore.client.http.ApiCall;
+import org.spongepowered.ore.client.http.OreConnection;
 import org.spongepowered.ore.client.http.PluginDownload;
 import org.spongepowered.ore.model.Project;
 import org.spongepowered.plugin.meta.PluginMetadata;
@@ -123,9 +123,9 @@ public final class SpongeOreClient implements OreClient {
 
     @Override
     public List<Project> searchProjects(String query) throws IOException {
-        ApiCall call = new ApiCall(this, PROJECT_LIST, "?q=" + query);
-        call.openConnection();
-        return Arrays.asList(call.read(Project[].class));
+        OreConnection conn = new OreConnection(this, PROJECT_LIST, "?q=" + query);
+        conn.openConnection();
+        return Arrays.asList(conn.read(Project[].class));
     }
 
     /**

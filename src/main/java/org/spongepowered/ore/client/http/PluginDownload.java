@@ -5,17 +5,15 @@ import static org.spongepowered.ore.client.Routes.DOWNLOAD;
 import org.spongepowered.ore.client.OreClient;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Optional;
 
 /**
  * Represents a plugin download from the Ore server.
  */
-public final class PluginDownload extends ApiCall {
+public final class PluginDownload extends OreConnection {
 
     private final String pluginId, version;
     private String name;
-    private InputStream in;
 
     /**
      * Constructs a new PluginDownload ready to begin.
@@ -25,19 +23,9 @@ public final class PluginDownload extends ApiCall {
      * @param version Version of plugin to download
      */
     public PluginDownload(OreClient client, String pluginId, String version) {
-        super(client, DOWNLOAD, pluginId, version);
+        super(client, DOWNLOAD, (Object) pluginId, version);
         this.pluginId = pluginId;
         this.version = version;
-    }
-
-    /**
-     * Returns the {@link InputStream} of the download if the connection has
-     * been opened, empty otherwise.
-     *
-     * @return InputStream of download
-     */
-    public Optional<InputStream> getInputStream() {
-        return Optional.ofNullable(this.in);
     }
 
     /**
