@@ -128,28 +128,18 @@ public final class SpongeOreClient implements OreClient {
         return Arrays.asList(conn.read(Project[].class));
     }
 
-    /**
-     * Returns true if there are uninstallations to complete.
-     *
-     * @return True if uninstallations to complete
-     */
-    public boolean hasRemovalsToFinish() {
+    @Override
+    public boolean hasRemovals() {
         return !this.toRemove.isEmpty();
     }
 
-    /**
-     * Returns the amount of plugins to remove.
-     *
-     * @return Amount to remove
-     */
-    public int toRemove() {
+    @Override
+    public int getRemovals() {
         return this.toRemove.size();
     }
 
-    /**
-     * Deletes pending uninstallations.
-     */
-    public void finishRemovals() throws IOException {
+    @Override
+    public void applyRemovals() throws IOException {
         // Perform uninstalls
         for (PluginContainer plugin : this.toRemove) {
             Optional<Path> pathOpt = plugin.getSource();

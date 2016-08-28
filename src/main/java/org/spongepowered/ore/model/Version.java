@@ -1,19 +1,29 @@
 package org.spongepowered.ore.model;
 
 import com.google.common.base.Objects;
-import com.google.gson.annotations.SerializedName;
 
+/**
+ * Represents a version of a {@link Project}.
+ */
 public final class Version {
 
-    @SerializedName("channel")
-    private String channelName;
-    @SerializedName("version")
+    private Channel channel;
     private String name;
 
-    public String getChannelName() {
-        return this.channelName;
+    /**
+     * Returns the {@link Channel} this version belongs to.
+     *
+     * @return Channel version belongs to
+     */
+    public Channel getChannel() {
+        return this.channel;
     }
 
+    /**
+     * Returns the version name.
+     *
+     * @return Version name
+     */
     public String getName() {
         return this.name;
     }
@@ -21,7 +31,7 @@ public final class Version {
     @Override
     public String toString() {
         return Objects.toStringHelper(this)
-            .add("channelName", this.channelName)
+            .add("channel", this.channel)
             .add("name", this.name)
             .toString();
     }

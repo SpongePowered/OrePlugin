@@ -10,6 +10,8 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 /**
  * A client for interacting with the OrePlugin web server.
  */
@@ -35,7 +37,7 @@ public interface OreClient {
      * @param params Format parameters
      * @return Full URL
      */
-    default URL getRouteUrl(String route, String queryString, Object... params) {
+    default URL getRouteUrl(String route, @Nullable String queryString, Object... params) {
         try {
             return new URL(getRootUrl() + String.format(route, params)
                 + HttpUtils.encodeQueryStringParameters(queryString));
@@ -112,6 +114,25 @@ public interface OreClient {
      * Applies all updates that are currently pending.
      */
     void applyUpdates() throws IOException;
+
+    /**
+     * Returns true if there are uninstallations to complete.
+     *
+     * @return True if uninstallations to complete
+     */
+    boolean hasRemovals();
+
+    /**
+     * Returns the amount of plugins to remove.
+     *
+     * @return Amount to remove
+     */
+    int getRemovals();
+
+    /**
+     * Deletes pending uninstallations.
+     */
+    void applyRemovals() throws IOException;
 
     /**
      * Searches for {@link Project}s based on the given query.

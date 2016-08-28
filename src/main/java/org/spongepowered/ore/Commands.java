@@ -4,6 +4,7 @@ import static org.spongepowered.api.command.args.GenericArguments.onlyOne;
 import static org.spongepowered.api.command.args.GenericArguments.optional;
 import static org.spongepowered.api.command.args.GenericArguments.remainingJoinedStrings;
 import static org.spongepowered.api.command.args.GenericArguments.string;
+import static org.spongepowered.api.text.Text.*;
 import static org.spongepowered.api.text.format.TextColors.YELLOW;
 import static org.spongepowered.ore.Messages.ALREADY_INSTALLED;
 import static org.spongepowered.ore.Messages.DESCRIPTION_INSTALL;
@@ -54,8 +55,8 @@ public final class Commands {
         .permission("ore.install")
         .description(DESCRIPTION_INSTALL.apply().build())
         .arguments(
-            onlyOne(string(Text.of("pluginId"))),
-            optional(onlyOne(string(Text.of("version"))))
+            onlyOne(string(of("pluginId"))),
+            optional(onlyOne(string(of("version"))))
         )
         .executor(this::installPlugin)
         .build();
@@ -63,7 +64,7 @@ public final class Commands {
     private final CommandSpec uninstall = CommandSpec.builder()
         .permission("ore.uninstall")
         .description(DESCRIPTION_UNINSTALL.apply().build())
-        .arguments(onlyOne(string(Text.of("pluginId"))))
+        .arguments(onlyOne(string(of("pluginId"))))
         .executor(this::uninstallPlugin)
         .build();
 
@@ -71,8 +72,8 @@ public final class Commands {
         .permission("ore.update")
         .description(DESCRIPTION_UPDATE.apply().build())
         .arguments(
-            onlyOne(string(Text.of("pluginId"))),
-            optional(onlyOne(string(Text.of("version"))))
+            onlyOne(string(of("pluginId"))),
+            optional(onlyOne(string(of("version"))))
         )
         .executor(this::updatePlugin)
         .build();
@@ -80,7 +81,7 @@ public final class Commands {
     private final CommandSpec search = CommandSpec.builder()
         .permission("ore.search")
         .description(DESCRIPTION_SEARCH.apply().build())
-        .arguments(remainingJoinedStrings(Text.of("query")))
+        .arguments(remainingJoinedStrings(of("query")))
         .executor(this::searchForPlugins)
         .build();
 
@@ -120,7 +121,7 @@ public final class Commands {
 
         newAsyncTask(TASK_NAME_DOWNLOAD, () -> {
             this.client.installPlugin(pluginId, version);
-            src.sendMessage(Text.of("Download of " + pluginId + " complete. Restart the server to complete "
+            src.sendMessage(of("Download of " + pluginId + " complete. Restart the server to complete "
                 + "installation."));
         });
 
@@ -144,8 +145,8 @@ public final class Commands {
 
         newAsyncTask(TASK_NAME_DOWNLOAD, () -> {
             this.client.downloadUpdate(pluginId, version);
-            src.sendMessage(DOWNLOAD_RESTART_SERVER
-                .apply(ImmutableMap.of("pluginId", Text.of(pluginId), "phase", Text.of("update"))).build());
+            src.sendMessage(DOWNLOAD_RESTART_SERVER.apply(ImmutableMap.of("pluginId", of(pluginId), "phase",
+                of("update"))).build());
         });
 
         return CommandResult.success();
@@ -163,7 +164,7 @@ public final class Commands {
             }
 
             PaginationList.builder()
-                .title(Text.of(YELLOW, TASK_NAME_SEARCH))
+                .title(of(YELLOW, TASK_NAME_SEARCH))
                 .contents(result.stream()
                     .<Text>map(Project::toText)
                     .collect(Collectors.toList()))
@@ -181,7 +182,7 @@ public final class Commands {
     }
 
     private Map<String, TextElement> tuplePid(String pluginId) {
-        return ImmutableMap.of("pluginId", Text.of(pluginId));
+        return ImmutableMap.of("pluginId", of(pluginId));
     }
 
 }

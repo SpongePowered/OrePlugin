@@ -35,7 +35,7 @@ public final class OrePlugin {
     @Inject public Logger log;
     @Inject public Game game;
 
-    private SpongeOreClient client;
+    private OreClient client;
 
     @Listener
     public void onStart(GameStartedServerEvent event) throws MalformedURLException {
@@ -53,9 +53,9 @@ public final class OrePlugin {
             this.log.info("Done.");
         }
 
-        if (this.client.hasRemovalsToFinish()) {
-            this.log.info("Uninstalling " + this.client.toRemove() + " plugins...");
-            this.client.finishRemovals();
+        if (this.client.hasRemovals()) {
+            this.log.info("Uninstalling " + this.client.getRemovals() + " plugins...");
+            this.client.applyRemovals();
             this.log.info("Done.");
         }
     }

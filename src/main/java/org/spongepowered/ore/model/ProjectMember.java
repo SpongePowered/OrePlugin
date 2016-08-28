@@ -4,6 +4,11 @@ import com.google.common.base.Objects;
 
 import java.util.List;
 
+import javax.management.relation.Role;
+
+/**
+ * Represents a user member of a {@link Project}.
+ */
 public final class ProjectMember {
 
     private int userId;
@@ -11,18 +16,39 @@ public final class ProjectMember {
     private List<String> roles;
     private String headRole;
 
+    /**
+     * Returns the unique ID of the user.
+     *
+     * @return User unique ID
+     */
     public int getUserId() {
         return this.userId;
     }
 
+    /**
+     * Returns the user's username.
+     *
+     * @return User's username
+     */
     public String getName() {
         return this.name;
     }
 
+    /**
+     * Returns a list of {@link Role}s that this member possesses for the
+     * {@link Project}.
+     *
+     * @return Project roles
+     */
     public List<String> getRoles() {
         return this.roles;
     }
 
+    /**
+     * Returns the top {@link Role} for this member.
+     *
+     * @return Top role
+     */
     public String getHeadRole() {
         return this.headRole;
     }
