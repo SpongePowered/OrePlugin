@@ -7,27 +7,34 @@ import static java.nio.file.Files.delete;
 import static java.nio.file.Files.deleteIfExists;
 import static java.nio.file.Files.exists;
 import static java.nio.file.Files.move;
+import static org.spongepowered.ore.client.Routes.PROJECT;
 import static org.spongepowered.ore.client.Routes.PROJECT_LIST;
 
 import org.apache.commons.io.FileUtils;
 import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.plugin.PluginManager;
+import org.spongepowered.ore.client.exception.NoUpdateAvailableException;
+import org.spongepowered.ore.client.exception.PluginAlreadyInstalledException;
+import org.spongepowered.ore.client.exception.PluginNotFoundException;
+import org.spongepowered.ore.client.exception.PluginNotInstalledException;
 import org.spongepowered.ore.client.http.OreConnection;
 import org.spongepowered.ore.client.http.PluginDownload;
 import org.spongepowered.ore.model.Project;
 import org.spongepowered.plugin.meta.PluginMetadata;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 public final class SpongeOreClient implements OreClient {
 
@@ -36,7 +43,7 @@ public final class SpongeOreClient implements OreClient {
     private final Path modsDir, updatesDir;
     private final Map<String, Path> newInstalls = new HashMap<>();
     private final Map<String, Path> updatesToInstall = new HashMap<>();
-    private final List<PluginContainer> toRemove = new ArrayList<>();
+    private final Set<PluginContainer> toRemove = new HashSet<>();
 
     public SpongeOreClient(String rootUrl, Path modsDir, Path updatesDir, PluginManager pluginManager)
         throws MalformedURLException {
@@ -62,23 +69,63 @@ public final class SpongeOreClient implements OreClient {
     }
 
     @Override
-    public void installPlugin(String id, String version) {
+    public boolean isInstalled(String id) {
+        boolean loaded = this.pluginManager.isLoaded(id);
+        boolean removalPending = this.toRemove.stream()
+            .filter(plugin -> plugin.getId().equals(id))
+            .findAny()
+            .isPresent();
+        return (loaded && !removalPending) || (!loaded && this.newInstalls.containsKey(id));
+    }
+
+    @Override
+    public void installPlugin(String id, String version)
+        throws IOException, PluginAlreadyInstalledException, PluginNotFoundException {
+        checkNotInstalled(id);
+
+        // A plugin can be uninstalled but still loaded, download to updates
+        // dir if this is the case
+        Path target;
         if (this.pluginManager.isLoaded(id))
-            throw new RuntimeException("Plugin \"" + id + "\" is already installed.");
-        this.downloadPlugin(id, version, this.newInstalls, this.modsDir);
+            this.downloadPlugin(id, version, this.updatesDir, this.updatesToInstall);
+        else
+            this.downloadPlugin(id, version, this.modsDir, this.newInstalls);
+
+        // Remove from uninstallation list if present
+        this.toRemove.removeIf(plugin -> plugin.getId().equals(id));
     }
 
     @Override
-    public void uninstallPlugin(String id) {
-        this.toRemove.add(this.pluginManager.getPlugin(id)
-            .orElseThrow(() -> new RuntimeException("Plugin \"" + id + "\" is not installed.")));
+    public void uninstallPlugin(String id) throws IOException, PluginNotInstalledException {
+        checkInstalled(id);
+        // Add to removal set if loaded, delete file otherwise
+        if (this.pluginManager.isLoaded(id))
+            this.toRemove.add(this.pluginManager.getPlugin(id).get());
+        else {
+            // Delete pending installs
+            delete(this.newInstalls.remove(id));
+        }
+
+        // Delete pending updates
+        if (this.updatesToInstall.containsKey(id))
+            delete(this.updatesToInstall.remove(id));
     }
 
     @Override
-    public void downloadUpdate(String id, String version) {
-        if (!this.pluginManager.isLoaded(id))
-            throw new RuntimeException("Plugin \"" + id + "\" is not installed.");
-        this.downloadPlugin(id, version, this.updatesToInstall, this.updatesDir);
+    public boolean isUpdateAvailable(String id) throws IOException, PluginNotInstalledException {
+        checkInstalled(id);
+        Project project = OreConnection.open(this, PROJECT, (Object) id).open().read(Project.class);
+        String currentVersion = this.pluginManager.getPlugin(id).get().getVersion().orElse("");
+        return !currentVersion.equals(project.getRecommendedVersion().getName());
+    }
+
+    @Override
+    public void downloadUpdate(String id, String version)
+        throws IOException, PluginNotInstalledException, NoUpdateAvailableException, PluginNotFoundException {
+        checkInstalled(id);
+        if (version.equals(VERSION_RECOMMENDED) && !isUpdateAvailable(id))
+            throw new NoUpdateAvailableException(id);
+        this.downloadPlugin(id, version, this.updatesDir, this.updatesToInstall);
     }
 
     @Override
@@ -123,9 +170,8 @@ public final class SpongeOreClient implements OreClient {
 
     @Override
     public List<Project> searchProjects(String query) throws IOException {
-        OreConnection conn = new OreConnection(this, PROJECT_LIST, "?q=" + query);
-        conn.openConnection();
-        return Arrays.asList(conn.read(Project[].class));
+        return Arrays.asList(OreConnection.openWithQuery(this, PROJECT_LIST, "?q=" + query)
+            .open().read(Project[].class));
     }
 
     @Override
@@ -148,30 +194,30 @@ public final class SpongeOreClient implements OreClient {
         }
     }
 
-    private void downloadPlugin(String id, String version, Map<String, Path> awaitingRestart, Path targetDir) {
+    private Path downloadPlugin(String id, String version, Path targetDir, Map<String, Path> downloadMap)
+        throws IOException, PluginNotFoundException {
+        // Initialize download
+        PluginDownload download;
         try {
-            // Initialize download
-            PluginDownload download = new PluginDownload(this, id, version);
-            download.openConnection();
-
-            // Override previous pending installs/updates
-            if (awaitingRestart.containsKey(id))
-                delete(awaitingRestart.remove(id));
-
-            // Find available name
-            Path target = targetDir.resolve(download.getFileName().get());
-            target = findAvailablePath(download.getName().get(), target);
-
-            // Create file
-            createDirectories(target.getParent());
-            createFile(target);
-
-            // Download
-            copy(download.getInputStream().get(), target, StandardCopyOption.REPLACE_EXISTING);
-            awaitingRestart.put(id, target);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            download = new PluginDownload(this, id, version).open();
+        } catch (FileNotFoundException e) {
+            throw new PluginNotFoundException(id, e);
         }
+
+        // Override already pending installs/updates
+        if (downloadMap.containsKey(id))
+            delete(downloadMap.remove(id));
+
+        // Copy to target file
+        Path target = targetDir.resolve(download.getFileName().get());
+        target = findAvailablePath(download.getName().get(), target);
+
+        createDirectories(target.getParent());
+        createFile(target);
+
+        copy(download.getInputStream().get(), target, StandardCopyOption.REPLACE_EXISTING);
+        downloadMap.put(id, target);
+        return target;
     }
 
     private Path findAvailablePath(String name, Path target) {
@@ -179,6 +225,16 @@ public final class SpongeOreClient implements OreClient {
         while (exists(target))
             target = target.getParent().resolve(name + " (" + ++conflicts + ").jar");
         return target;
+    }
+
+    private void checkNotInstalled(String id) throws PluginAlreadyInstalledException {
+        if (isInstalled(id))
+            throw new PluginAlreadyInstalledException(id);
+    }
+
+    private void checkInstalled(String id) throws PluginNotInstalledException {
+        if (!isInstalled(id))
+            throw new PluginNotInstalledException(id);
     }
 
 }

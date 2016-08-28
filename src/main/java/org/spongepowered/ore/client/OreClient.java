@@ -1,5 +1,9 @@
 package org.spongepowered.ore.client;
 
+import org.spongepowered.ore.client.exception.NoUpdateAvailableException;
+import org.spongepowered.ore.client.exception.PluginAlreadyInstalledException;
+import org.spongepowered.ore.client.exception.PluginNotFoundException;
+import org.spongepowered.ore.client.exception.PluginNotInstalledException;
 import org.spongepowered.ore.client.http.HttpUtils;
 import org.spongepowered.ore.model.Project;
 
@@ -74,19 +78,38 @@ public interface OreClient {
     Path getUpdatesDir();
 
     /**
+     * Returns true if the plugin with the specified ID is installed, loaded
+     * or not.
+     *
+     * @param id Plugin ID
+     * @return True if installed
+     */
+    boolean isInstalled(String id);
+
+    /**
      * Installs a plugin of the specified ID.
      *
      * @param id Plugin ID
      * @param version Plugin version
      */
-    void installPlugin(String id, String version);
+    void installPlugin(String id, String version)
+        throws IOException, PluginAlreadyInstalledException, PluginNotFoundException;
 
     /**
      * Uninstalls a plugin.
      *
      * @param id ID of plugin to uninstall
      */
-    void uninstallPlugin(String id);
+    void uninstallPlugin(String id) throws IOException, PluginNotInstalledException;
+
+    /**
+     * Returns true if there is an update available for the specified plugin
+     * ID.
+     *
+     * @param id plugin ID
+     * @return True if there is an update available
+     */
+    boolean isUpdateAvailable(String id) throws IOException, PluginNotInstalledException;
 
     /**
      * Downloads an update for a plugin of the specified ID.
@@ -94,7 +117,8 @@ public interface OreClient {
      * @param id Plugin ID
      * @param version Plugin version
      */
-    void downloadUpdate(String id, String version);
+    void downloadUpdate(String id, String version)
+        throws IOException, PluginNotInstalledException, NoUpdateAvailableException, PluginNotFoundException;
 
     /**
      * Returns true if there are any updates to apply.

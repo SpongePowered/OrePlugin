@@ -9,6 +9,7 @@ import org.spongepowered.api.event.game.state.GameStoppingEvent;
 import org.spongepowered.api.plugin.Plugin;
 import org.spongepowered.ore.client.OreClient;
 import org.spongepowered.ore.client.SpongeOreClient;
+import org.spongepowered.ore.cmd.CommandExecutors;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -41,7 +42,7 @@ public final class OrePlugin {
     public void onStart(GameStartedServerEvent event) throws MalformedURLException {
         this.log.info("Initializing...");
         this.client = new SpongeOreClient(ROOT_URL, MODS_DIR, UPDATES_DIR, this.game.getPluginManager());
-        new Commands(this).register();
+        new CommandExecutors(this).register();
         this.log.info("Done.");
     }
 

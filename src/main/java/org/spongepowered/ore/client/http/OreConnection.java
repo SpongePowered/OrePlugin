@@ -20,26 +20,11 @@ public class OreConnection {
     protected InputStream in;
     protected HttpURLConnection http;
 
-    /**
-     * Constructs a new connection for the specified client.
-     *
-     * @param client Ore client
-     * @param route API route
-     * @param queryString Query string
-     * @param params Route parameters
-     */
-    public OreConnection(OreClient client, String route, String queryString, Object... params) {
+    protected OreConnection(OreClient client, String route, String queryString, Object... params) {
         this.routeUrl = client.getRouteUrl(route, queryString, params);
     }
 
-    /**
-     * Constructs a new connection for the specified client.
-     *
-     * @param client Ore client
-     * @param route API route
-     * @param params Route parameters
-     */
-    public OreConnection(OreClient client, String route, Object... params) {
+    protected OreConnection(OreClient client, String route, Object... params) {
         this(client, route, "", params);
     }
 
@@ -67,10 +52,11 @@ public class OreConnection {
      *
      * @throws IOException
      */
-    public void openConnection() throws IOException {
+    public OreConnection open() throws IOException {
         // Establish connection
         this.http = (HttpURLConnection) this.routeUrl.openConnection();
         this.in = this.http.getInputStream();
+        return this;
     }
 
     /**
@@ -84,6 +70,30 @@ public class OreConnection {
         if (this.in == null)
             throw new RuntimeException("nothing to read");
         return this.gson.fromJson(new InputStreamReader(this.in), modelClass);
+    }
+
+    /**
+     * Constructs a new connection for the specified client.
+     *
+     * @param client Ore client
+     * @param route API route
+     * @param queryString Query string
+     * @param params Route parameters
+     */
+    public static OreConnection openWithQuery(OreClient client, String route, String queryString, Object... params)
+        throws IOException {
+        return new OreConnection(client, route, queryString, params).open();
+    }
+
+    /**
+     * Constructs a new connection for the specified client.
+     *
+     * @param client Ore client
+     * @param route API route
+     * @param params Route parameters
+     */
+    public static OreConnection open(OreClient client, String route, Object... params) throws IOException {
+        return new OreConnection(client, route, params).open();
     }
 
 }

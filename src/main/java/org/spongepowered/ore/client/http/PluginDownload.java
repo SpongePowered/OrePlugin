@@ -71,8 +71,9 @@ public final class PluginDownload extends OreConnection {
      *
      * @throws IOException
      */
-    public void openConnection() throws IOException {
-        super.openConnection();
+    @Override
+    public PluginDownload open() throws IOException {
+        super.open();
         // Get name for file
         String contentDisposition = this.http.getHeaderField("Content-Disposition");
         this.name = this.pluginId;
@@ -80,6 +81,7 @@ public final class PluginDownload extends OreConnection {
             String section = contentDisposition.split(";")[1];
             this.name = section.substring(section.indexOf('"') + 1, section.lastIndexOf('.'));
         }
+        return this;
     }
 
 }

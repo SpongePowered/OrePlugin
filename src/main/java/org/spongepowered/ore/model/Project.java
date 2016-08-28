@@ -151,7 +151,7 @@ public final class Project implements TextRepresentable {
 
     @Override
     public Text toText() {
-        return Text.of(YELLOW, this.name + " " + this.recommendedVersion.getName(), GRAY, " by " + this.ownerName);
+        return Text.of(YELLOW, this.pluginId + " " + this.recommendedVersion.getName(), GRAY, " by " + this.ownerName);
     }
 
     @Override
