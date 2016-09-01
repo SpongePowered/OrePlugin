@@ -31,6 +31,10 @@ import org.spongepowered.ore.model.Project;
 
 import java.io.IOException;
 
+/**
+ * A single interactive {@link TextRepresentable} that describes a
+ * {@link Project}.
+ */
 public final class ProjectListItem implements TextRepresentable {
 
     final OrePlugin plugin;
@@ -76,6 +80,11 @@ public final class ProjectListItem implements TextRepresentable {
 
     }
 
+    /**
+     * Returns the {@link Project} this item describes.
+     *
+     * @return Project item describes
+     */
     public Project getProject() {
         return this.project;
     }
@@ -117,6 +126,16 @@ public final class ProjectListItem implements TextRepresentable {
         return this.text;
     }
 
+    /**
+     * Creates a new {@link ProjectListItem} for the specified plugin and
+     * {@link Project}.
+     *
+     * @param plugin Plugin
+     * @param project Project
+     * @return New item
+     * @throws IOException
+     * @throws PluginNotInstalledException
+     */
     public static ProjectListItem of(OrePlugin plugin, Project project)
         throws IOException, PluginNotInstalledException {
         return new ProjectListItem(plugin, project);

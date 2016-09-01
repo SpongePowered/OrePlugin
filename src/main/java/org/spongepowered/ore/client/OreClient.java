@@ -2,7 +2,6 @@ package org.spongepowered.ore.client;
 
 import org.spongepowered.ore.client.exception.NoUpdateAvailableException;
 import org.spongepowered.ore.client.exception.PluginAlreadyInstalledException;
-import org.spongepowered.ore.client.exception.PluginNotFoundException;
 import org.spongepowered.ore.client.exception.PluginNotInstalledException;
 import org.spongepowered.ore.client.http.HttpUtils;
 import org.spongepowered.ore.model.Project;
@@ -11,7 +10,6 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.file.Path;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -62,22 +60,6 @@ public interface OreClient {
     }
 
     /**
-     * Returns the {@link Path} to the directory in which installed plugins
-     * reside.
-     *
-     * @return Path to mods dir
-     */
-    Path getModsDir();
-
-    /**
-     * Returns the {@link Path} to the directory in which pending updates
-     * reside.
-     *
-     * @return Path to updates dir
-     */
-    Path getUpdatesDir();
-
-    /**
      * Returns true if the plugin with the specified ID is installed, loaded
      * or not.
      *
@@ -92,8 +74,7 @@ public interface OreClient {
      * @param id Plugin ID
      * @param version Plugin version
      */
-    void installPlugin(String id, String version)
-        throws IOException, PluginAlreadyInstalledException, PluginNotFoundException;
+    void installPlugin(String id, String version) throws IOException, PluginAlreadyInstalledException;
 
     /**
      * Uninstalls a plugin.
@@ -118,45 +99,45 @@ public interface OreClient {
      * @param version Plugin version
      */
     void downloadUpdate(String id, String version)
-        throws IOException, PluginNotInstalledException, NoUpdateAvailableException, PluginNotFoundException;
+        throws IOException, PluginNotInstalledException, NoUpdateAvailableException;
 
     /**
      * Returns true if there are any updates to apply.
      *
      * @return True if there are updates to apply
      */
-    boolean hasUpdates();
+    boolean hasUninstalledUpdates();
 
     /**
      * Returns the amount of updates there are to apply.
      *
      * @return Amount of updates to apply
      */
-    int getUpdates();
+    int getUninstalledUpdates();
 
     /**
      * Applies all updates that are currently pending.
      */
-    void applyUpdates() throws IOException;
+    void installUpdates() throws IOException;
 
     /**
      * Returns true if there are uninstallations to complete.
      *
      * @return True if uninstallations to complete
      */
-    boolean hasRemovals();
+    boolean hasPendingUninstallations();
 
     /**
      * Returns the amount of plugins to remove.
      *
      * @return Amount to remove
      */
-    int getRemovals();
+    int getPendingUninstallations();
 
     /**
      * Deletes pending uninstallations.
      */
-    void applyRemovals() throws IOException;
+    void completeUninstallations() throws IOException;
 
     /**
      * Searches for {@link Project}s based on the given query.

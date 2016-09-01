@@ -11,6 +11,7 @@ import static org.spongepowered.ore.client.Routes.PROJECT;
 import static org.spongepowered.ore.client.Routes.PROJECT_LIST;
 
 import org.apache.commons.io.FileUtils;
+import org.spongepowered.api.Sponge;
 import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.plugin.PluginManager;
 import org.spongepowered.ore.client.exception.NoUpdateAvailableException;
@@ -36,13 +37,17 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+/**
+ * An implementation of {@link OreClient} built around the {@link Sponge}
+ * platform.
+ */
 public final class SpongeOreClient implements OreClient {
 
     private final PluginManager pluginManager;
     private final URL rootUrl;
     private final Path modsDir, updatesDir;
-    private final Map<String, Path> newInstalls = new HashMap<>();
-    private final Map<String, Path> updatesToInstall = new HashMap<>();
+    private final Map<String, Installation> newInstalls = new HashMap<>();
+    private final Map<String, Installation> updatesToInstall = new HashMap<>();
     private final Set<PluginContainer> toRemove = new HashSet<>();
 
     public SpongeOreClient(String rootUrl, Path modsDir, Path updatesDir, PluginManager pluginManager)
@@ -59,17 +64,10 @@ public final class SpongeOreClient implements OreClient {
     }
 
     @Override
-    public Path getModsDir() {
-        return this.modsDir;
-    }
-
-    @Override
-    public Path getUpdatesDir() {
-        return this.updatesDir;
-    }
-
-    @Override
     public boolean isInstalled(String id) {
+        // Returns true if the plugin is loaded and is not going to be
+        // uninstalled or if the plugin is unloaded and is going to be
+        // installed
         boolean loaded = this.pluginManager.isLoaded(id);
         boolean removalPending = this.toRemove.stream()
             .filter(plugin -> plugin.getId().equals(id))
@@ -79,8 +77,7 @@ public final class SpongeOreClient implements OreClient {
     }
 
     @Override
-    public void installPlugin(String id, String version)
-        throws IOException, PluginAlreadyInstalledException, PluginNotFoundException {
+    public void installPlugin(String id, String version) throws IOException, PluginAlreadyInstalledException {
         checkNotInstalled(id);
 
         // A plugin can be uninstalled but still loaded, download to updates
@@ -98,30 +95,36 @@ public final class SpongeOreClient implements OreClient {
     @Override
     public void uninstallPlugin(String id) throws IOException, PluginNotInstalledException {
         checkInstalled(id);
+
         // Add to removal set if loaded, delete file otherwise
         if (this.pluginManager.isLoaded(id))
             this.toRemove.add(this.pluginManager.getPlugin(id).get());
         else {
             // Delete pending installs
-            delete(this.newInstalls.remove(id));
+            delete(this.newInstalls.remove(id).getPath());
         }
 
         // Delete pending updates
         if (this.updatesToInstall.containsKey(id))
-            delete(this.updatesToInstall.remove(id));
+            delete(this.updatesToInstall.remove(id).getPath());
     }
 
     @Override
     public boolean isUpdateAvailable(String id) throws IOException, PluginNotInstalledException {
         checkInstalled(id);
-        Project project = OreConnection.open(this, PROJECT, (Object) id).open().read(Project.class);
-        String currentVersion = this.pluginManager.getPlugin(id).get().getVersion().orElse("");
-        return !currentVersion.equals(project.getRecommendedVersion().getName());
+        Project project = OreConnection.open(this, PROJECT, id).read(Project.class);
+
+        String currentVersion = this.pluginManager.getPlugin(id)
+            .<String>map(plugin -> plugin.getVersion().orElse(""))
+            .orElse(this.newInstalls.get(id).getVersion());
+
+        return !currentVersion.equals(VERSION_RECOMMENDED)
+            && !currentVersion.equals(project.getRecommendedVersion().getName());
     }
 
     @Override
     public void downloadUpdate(String id, String version)
-        throws IOException, PluginNotInstalledException, NoUpdateAvailableException, PluginNotFoundException {
+        throws IOException, PluginNotInstalledException, NoUpdateAvailableException {
         checkInstalled(id);
         if (version.equals(VERSION_RECOMMENDED) && !isUpdateAvailable(id))
             throw new NoUpdateAvailableException(id);
@@ -129,17 +132,17 @@ public final class SpongeOreClient implements OreClient {
     }
 
     @Override
-    public boolean hasUpdates() {
+    public boolean hasUninstalledUpdates() {
         return !this.updatesToInstall.isEmpty();
     }
 
     @Override
-    public int getUpdates() {
+    public int getUninstalledUpdates() {
         return this.updatesToInstall.size();
     }
 
     @Override
-    public void applyUpdates() throws IOException {
+    public void installUpdates() throws IOException {
         Map<Path, List<PluginMetadata>> installedMetadata = new PluginMetadataScanner(this.modsDir).scan();
         for (String pluginId : this.updatesToInstall.keySet()) {
             // Delete obsolete version
@@ -155,7 +158,7 @@ public final class SpongeOreClient implements OreClient {
             }
 
             // Install new update
-            Path updatePath = this.updatesToInstall.get(pluginId);
+            Path updatePath = this.updatesToInstall.get(pluginId).getPath();
             Path target = this.modsDir.resolve(updatePath.getFileName());
             String fileName = target.getFileName().toString();
             String name = fileName.substring(0, fileName.lastIndexOf('.'));
@@ -170,22 +173,21 @@ public final class SpongeOreClient implements OreClient {
 
     @Override
     public List<Project> searchProjects(String query) throws IOException {
-        return Arrays.asList(OreConnection.openWithQuery(this, PROJECT_LIST, "?q=" + query)
-            .open().read(Project[].class));
+        return Arrays.asList(OreConnection.openWithQuery(this, PROJECT_LIST, "?q=" + query).read(Project[].class));
     }
 
     @Override
-    public boolean hasRemovals() {
+    public boolean hasPendingUninstallations() {
         return !this.toRemove.isEmpty();
     }
 
     @Override
-    public int getRemovals() {
+    public int getPendingUninstallations() {
         return this.toRemove.size();
     }
 
     @Override
-    public void applyRemovals() throws IOException {
+    public void completeUninstallations() throws IOException {
         // Perform uninstalls
         for (PluginContainer plugin : this.toRemove) {
             Optional<Path> pathOpt = plugin.getSource();
@@ -194,29 +196,27 @@ public final class SpongeOreClient implements OreClient {
         }
     }
 
-    private Path downloadPlugin(String id, String version, Path targetDir, Map<String, Path> downloadMap)
-        throws IOException, PluginNotFoundException {
+    private Path downloadPlugin(String id, String version, Path targetDir, Map<String, Installation> downloadMap)
+        throws IOException {
         // Initialize download
         PluginDownload download;
         try {
             download = new PluginDownload(this, id, version).open();
         } catch (FileNotFoundException e) {
-            throw new PluginNotFoundException(id, e);
+            throw new PluginNotFoundException(id);
         }
 
         // Override already pending installs/updates
         if (downloadMap.containsKey(id))
-            delete(downloadMap.remove(id));
+            delete(downloadMap.remove(id).getPath());
 
         // Copy to target file
-        Path target = targetDir.resolve(download.getFileName().get());
-        target = findAvailablePath(download.getName().get(), target);
-
+        Path target = findAvailablePath(download.getName().get(), targetDir.resolve(download.getFileName().get()));
         createDirectories(target.getParent());
         createFile(target);
 
         copy(download.getInputStream().get(), target, StandardCopyOption.REPLACE_EXISTING);
-        downloadMap.put(id, target);
+        downloadMap.put(id, new Installation(id, version, target));
         return target;
     }
 

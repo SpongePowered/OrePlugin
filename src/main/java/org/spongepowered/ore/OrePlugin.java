@@ -1,8 +1,10 @@
 package org.spongepowered.ore;
 
+import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import org.slf4j.Logger;
 import org.spongepowered.api.Game;
 import org.spongepowered.api.command.CommandSource;
+import org.spongepowered.api.config.DefaultConfig;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.Order;
 import org.spongepowered.api.event.game.state.GameStartedServerEvent;
@@ -13,11 +15,10 @@ import org.spongepowered.ore.client.OreClient;
 import org.spongepowered.ore.client.SpongeOreClient;
 import org.spongepowered.ore.cmd.CommandExecutors;
 import org.spongepowered.ore.cmd.CommandTry;
+import org.spongepowered.ore.config.OreConfig;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import javax.inject.Inject;
 
@@ -32,34 +33,34 @@ import javax.inject.Inject;
 )
 public final class OrePlugin {
 
-    private static final String ROOT_URL = "http://localhost:9000";
-    private static final Path MODS_DIR = Paths.get("./mods");
-    private static final Path UPDATES_DIR = Paths.get("./updates");
-
     @Inject public Logger log;
     @Inject public Game game;
+    @Inject @DefaultConfig(sharedRoot = true) private Path configPath;
 
     private OreClient client;
+    private OreConfig config;
 
     @Listener
-    public void onStart(GameStartedServerEvent event) throws MalformedURLException {
+    public void onStart(GameStartedServerEvent event) throws IOException, ObjectMappingException {
         this.log.info("Initializing...");
-        this.client = new SpongeOreClient(ROOT_URL, MODS_DIR, UPDATES_DIR, this.game.getPluginManager());
+        this.config = OreConfig.load(this.configPath);
+        this.client = new SpongeOreClient(this.config.getRepositoryUrl(), this.config.getInstallationDirectory(),
+            this.config.getUpdatesDirectory(), this.game.getPluginManager());
         new CommandExecutors(this).register();
         this.log.info("Done.");
     }
 
     @Listener(order = Order.POST)
     public void onStop(GameStoppingEvent event) throws IOException {
-        if (this.client.hasUpdates()) {
-            this.log.info("Applying " + this.client.getUpdates() + " updates...");
-            this.client.applyUpdates();
+        if (this.client.hasUninstalledUpdates()) {
+            this.log.info("Applying " + this.client.getUninstalledUpdates() + " updates...");
+            this.client.installUpdates();
             this.log.info("Done.");
         }
 
-        if (this.client.hasRemovals()) {
-            this.log.info("Uninstalling " + this.client.getRemovals() + " plugins...");
-            this.client.applyRemovals();
+        if (this.client.hasPendingUninstallations()) {
+            this.log.info("Uninstalling " + this.client.getPendingUninstallations() + " plugins...");
+            this.client.completeUninstallations();
             this.log.info("Done.");
         }
     }
@@ -73,6 +74,23 @@ public final class OrePlugin {
         return this.client;
     }
 
+    /**
+     * Returns the loaded {@link OreConfig} for this plugin.
+     *
+     * @return OreConfig instance
+     */
+    public OreConfig getConfig() {
+        return this.config;
+    }
+
+    /**
+     * Creates and executes a new async task for a command executor.
+     *
+     * @param name Task name
+     * @param src CommandSource
+     * @param callable To execute
+     * @return Submitted task
+     */
     public Task newAsyncTask(String name, CommandSource src, CommandTry callable) {
         return this.game.getScheduler().createTaskBuilder()
             .name(name)

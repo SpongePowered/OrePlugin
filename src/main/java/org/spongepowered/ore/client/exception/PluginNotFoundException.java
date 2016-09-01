@@ -2,10 +2,10 @@ package org.spongepowered.ore.client.exception;
 
 import java.io.FileNotFoundException;
 
-public class PluginNotFoundException extends Exception {
+public class PluginNotFoundException extends FileNotFoundException {
 
-    public PluginNotFoundException(String pluginId, FileNotFoundException cause) {
-        super("Plugin \"" + pluginId + "\" could not be found.", cause);
+    public PluginNotFoundException(String pluginId) {
+        super("Plugin \"" + pluginId + "\" could not be found.");
     }
 
 }
