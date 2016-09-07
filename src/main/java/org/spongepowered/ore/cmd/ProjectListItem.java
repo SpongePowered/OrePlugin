@@ -27,7 +27,7 @@ import org.spongepowered.api.text.TextRepresentable;
 import org.spongepowered.ore.OrePlugin;
 import org.spongepowered.ore.client.OreClient;
 import org.spongepowered.ore.client.exception.PluginNotInstalledException;
-import org.spongepowered.ore.model.Project;
+import org.spongepowered.ore.client.model.Project;
 
 import java.io.IOException;
 

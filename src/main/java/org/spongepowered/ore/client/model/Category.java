@@ -1,4 +1,4 @@
-package org.spongepowered.ore.model;
+package org.spongepowered.ore.client.model;
 
 import com.google.common.base.Objects;
 import com.google.gson.annotations.SerializedName;

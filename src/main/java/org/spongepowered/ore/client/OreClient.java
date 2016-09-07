@@ -4,13 +4,14 @@ import org.spongepowered.ore.client.exception.NoUpdateAvailableException;
 import org.spongepowered.ore.client.exception.PluginAlreadyInstalledException;
 import org.spongepowered.ore.client.exception.PluginNotInstalledException;
 import org.spongepowered.ore.client.http.HttpUtils;
-import org.spongepowered.ore.model.Project;
+import org.spongepowered.ore.client.model.Project;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
+import java.util.Optional;
 
 import javax.annotation.Nullable;
 
@@ -67,6 +68,14 @@ public interface OreClient {
      * @return True if installed
      */
     boolean isInstalled(String id);
+
+    /**
+     * Returns an {@link Installation} of the specified plugin ID if it exists.
+     *
+     * @param id Plugin ID
+     * @return Plugin installation
+     */
+    Optional<Installation> getInstallation(String id);
 
     /**
      * Installs a plugin of the specified ID.
@@ -138,6 +147,13 @@ public interface OreClient {
      * Deletes pending uninstallations.
      */
     void completeUninstallations() throws IOException;
+
+    /**
+     * Retrieves and returns a {@link Project} of the specified ID.
+     *
+     * @return Project if exists, empty otherwise
+     */
+    Optional<Project> getProject(String id) throws IOException;
 
     /**
      * Searches for {@link Project}s based on the given query.

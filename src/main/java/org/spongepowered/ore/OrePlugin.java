@@ -1,6 +1,5 @@
 package org.spongepowered.ore;
 
-import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import org.slf4j.Logger;
 import org.spongepowered.api.Game;
 import org.spongepowered.api.command.CommandSource;
@@ -10,6 +9,7 @@ import org.spongepowered.api.event.Order;
 import org.spongepowered.api.event.game.state.GameStartedServerEvent;
 import org.spongepowered.api.event.game.state.GameStoppingEvent;
 import org.spongepowered.api.plugin.Plugin;
+import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.scheduler.Task;
 import org.spongepowered.ore.client.OreClient;
 import org.spongepowered.ore.client.SpongeOreClient;
@@ -35,13 +35,14 @@ public final class OrePlugin {
 
     @Inject public Logger log;
     @Inject public Game game;
+    @Inject public PluginContainer self;
     @Inject @DefaultConfig(sharedRoot = true) private Path configPath;
 
     private OreClient client;
     private OreConfig config;
 
     @Listener
-    public void onStart(GameStartedServerEvent event) throws IOException, ObjectMappingException {
+    public void onStart(GameStartedServerEvent event) throws IOException {
         this.log.info("Initializing...");
         this.config = OreConfig.load(this.configPath);
         this.client = new SpongeOreClient(this.config.getRepositoryUrl(), this.config.getInstallationDirectory(),

@@ -1,13 +1,10 @@
 package org.spongepowered.ore.cmd;
 
+import static org.spongepowered.api.text.Text.NEW_LINE;
 import static org.spongepowered.api.text.Text.of;
 import static org.spongepowered.api.text.format.TextColors.BLUE;
 import static org.spongepowered.api.text.format.TextColors.YELLOW;
-import static org.spongepowered.ore.Messages.DOWNLOAD_RESTART_SERVER;
-import static org.spongepowered.ore.Messages.INSTALLING;
-import static org.spongepowered.ore.Messages.REMOVAL;
-import static org.spongepowered.ore.Messages.SEARCHING;
-import static org.spongepowered.ore.Messages.UPDATING;
+import static org.spongepowered.ore.Messages.*;
 import static org.spongepowered.ore.Messages.tuplePid;
 import static org.spongepowered.ore.client.SpongeOreClient.VERSION_RECOMMENDED;
 
@@ -19,8 +16,11 @@ import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.service.pagination.PaginationList;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.ore.OrePlugin;
+import org.spongepowered.ore.client.Installation;
 import org.spongepowered.ore.client.OreClient;
+import org.spongepowered.ore.client.model.Project;
 
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -60,6 +60,10 @@ public final class CommandExecutors {
      * @return result of command
      */
     public CommandResult showVersion(CommandSource src, CommandContext context) {
+        src.sendMessage(VERSION.apply(ImmutableMap.of(
+            "name", of(this.plugin.self.getName()),
+            "version", of(this.plugin.self.getVersion())
+        )).build());
         return CommandResult.success();
     }
 
@@ -142,6 +146,58 @@ public final class CommandExecutors {
                 .sendTo(src);
             return null;
         });
+        return CommandResult.success();
+    }
+
+    /**
+     * Displays details about a specified plugin.
+     *
+     * @param src CommandSource
+     * @param context CommandContext
+     * @return result of command
+     */
+    public CommandResult showPlugin(CommandSource src, CommandContext context) {
+        Optional<Project> projectOpt = ((CommandTry<Optional<Project>>) () ->
+            this.client.getProject(context.<String>getOne("pluginId").get())
+        ).callFor(src);
+
+        if (projectOpt.isPresent()) {
+            Project project = projectOpt.get();
+            String pluginId = project.getPluginId();
+
+            // Installed version
+            Text version = NOT_INSTALLED;
+            Optional<Installation> installOpt = this.client.getInstallation(pluginId);
+            boolean installed = installOpt.isPresent();
+            if (installed)
+                version = of(installOpt.get().getVersion());
+
+            Text recommended = of(project.getRecommendedVersion().getName());
+            Text.Builder message = NAME.apply(ImmutableMap.of("content", of(project.getName())))
+                .append(NEW_LINE)
+                .append(ID.apply(ImmutableMap.of("content", of(project.getPluginId()))).build())
+                .append(NEW_LINE)
+                .append(AUTHOR.apply(ImmutableMap.of("content", of(project.getOwnerName()))).build())
+                .append(NEW_LINE)
+                .append(CATEGORY.apply(ImmutableMap.of("content", of(project.getCategory().getTitle()))).build())
+                .append(NEW_LINE)
+                .append(INSTALLED_VERSION.apply(ImmutableMap.of("content", version)).build())
+                .append(NEW_LINE)
+                .append(RECOMMENDED_VERSION.apply(ImmutableMap.of("content", recommended)).build());
+
+            if (installed) {
+                // Additional install information
+                Text answer = this.game.getPluginManager().isLoaded(pluginId) ? YES : NO_NEEDS_RESTART;
+                Text path = of(installOpt.get().getPath().toAbsolutePath().toString());
+                message.append(NEW_LINE)
+                    .append(LOADED.apply(ImmutableMap.of("content", answer)).build())
+                    .append(NEW_LINE)
+                    .append(LOCATION.apply(ImmutableMap.of("content", path)).build());
+            }
+
+            src.sendMessage(message.build());
+        }
+
         return CommandResult.success();
     }
 

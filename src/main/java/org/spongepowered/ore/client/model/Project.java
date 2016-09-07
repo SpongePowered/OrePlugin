@@ -1,4 +1,4 @@
-package org.spongepowered.ore.model;
+package org.spongepowered.ore.client.model;
 
 import static org.spongepowered.api.text.format.TextColors.GRAY;
 import static org.spongepowered.api.text.format.TextColors.YELLOW;

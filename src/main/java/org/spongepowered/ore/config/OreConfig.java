@@ -11,6 +11,8 @@ import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -23,18 +25,21 @@ public final class OreConfig {
     private static final Gson GSON = new GsonBuilder()
         .setPrettyPrinting()
         .registerTypeHierarchyAdapter(Path.class, new PathTypeAdapter())
+        .registerTypeAdapter(URL.class, new UrlTypeAdapter())
         .create();
 
-    private String repositoryUrl = "http://ore-staging.spongepowered.org";
+    private URL repositoryUrl = new URL("http://ore-staging.spongepowered.org");
     private Path installationDirectory = Paths.get("./mods");
     private Path updatesDirectory = Paths.get("./updates");
+
+    private OreConfig() throws MalformedURLException {}
 
     /**
      * Returns the location of the Ore server instance to use.
      *
      * @return Ore instance location
      */
-    public String getRepositoryUrl() {
+    public URL getRepositoryUrl() {
         return this.repositoryUrl;
     }
 

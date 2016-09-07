@@ -20,16 +20,16 @@ import org.spongepowered.ore.client.exception.PluginNotFoundException;
 import org.spongepowered.ore.client.exception.PluginNotInstalledException;
 import org.spongepowered.ore.client.http.OreConnection;
 import org.spongepowered.ore.client.http.PluginDownload;
-import org.spongepowered.ore.model.Project;
+import org.spongepowered.ore.client.model.Project;
 import org.spongepowered.plugin.meta.PluginMetadata;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -50,9 +50,8 @@ public final class SpongeOreClient implements OreClient {
     private final Map<String, Installation> updatesToInstall = new HashMap<>();
     private final Set<PluginContainer> toRemove = new HashSet<>();
 
-    public SpongeOreClient(String rootUrl, Path modsDir, Path updatesDir, PluginManager pluginManager)
-        throws MalformedURLException {
-        this.rootUrl = new URL(rootUrl);
+    public SpongeOreClient(URL rootUrl, Path modsDir, Path updatesDir, PluginManager pluginManager) {
+        this.rootUrl = rootUrl;
         this.modsDir = modsDir;
         this.updatesDir = updatesDir;
         this.pluginManager = pluginManager;
@@ -74,6 +73,22 @@ public final class SpongeOreClient implements OreClient {
             .findAny()
             .isPresent();
         return (loaded && !removalPending) || (!loaded && this.newInstalls.containsKey(id));
+    }
+
+    @Override
+    public Optional<Installation> getInstallation(String id) {
+        if (!isInstalled(id))
+            return Optional.empty();
+
+        Installation update = this.updatesToInstall.get(id);
+        if (update != null)
+            return Optional.of(update);
+
+        Installation install = this.newInstalls.get(id);
+        if (install != null)
+            return Optional.of(install);
+
+        return this.pluginManager.getPlugin(id).map(Installation::fromContainer);
     }
 
     @Override
@@ -99,10 +114,9 @@ public final class SpongeOreClient implements OreClient {
         // Add to removal set if loaded, delete file otherwise
         if (this.pluginManager.isLoaded(id))
             this.toRemove.add(this.pluginManager.getPlugin(id).get());
-        else {
+        else
             // Delete pending installs
             delete(this.newInstalls.remove(id).getPath());
-        }
 
         // Delete pending updates
         if (this.updatesToInstall.containsKey(id))
@@ -173,7 +187,8 @@ public final class SpongeOreClient implements OreClient {
 
     @Override
     public List<Project> searchProjects(String query) throws IOException {
-        return Arrays.asList(OreConnection.openWithQuery(this, PROJECT_LIST, "?q=" + query).read(Project[].class));
+        Project[] projects = OreConnection.openWithQuery(this, PROJECT_LIST, "?q=" + query).read(Project[].class);
+        return projects != null ? Arrays.asList(projects) : Collections.emptyList();
     }
 
     @Override
@@ -194,6 +209,11 @@ public final class SpongeOreClient implements OreClient {
             if (pathOpt.isPresent())
                 deleteIfExists(pathOpt.get());
         }
+    }
+
+    @Override
+    public Optional<Project> getProject(String id) throws IOException {
+        return Optional.ofNullable(OreConnection.open(this, PROJECT, id).read(Project.class));
     }
 
     private Path downloadPlugin(String id, String version, Path targetDir, Map<String, Installation> downloadMap)

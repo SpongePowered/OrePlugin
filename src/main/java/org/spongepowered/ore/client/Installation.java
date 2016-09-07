@@ -1,6 +1,7 @@
 package org.spongepowered.ore.client;
 
 import com.google.common.base.Objects;
+import org.spongepowered.api.plugin.PluginContainer;
 
 import java.nio.file.Path;
 
@@ -52,6 +53,18 @@ public class Installation {
      */
     public Path getPath() {
         return this.path;
+    }
+
+    /**
+     * Constructs a new Installation object from the specified
+     * {@link PluginContainer}.
+     *
+     * @param container Plugin container
+     * @return Installation object
+     */
+    public static Installation fromContainer(PluginContainer container) {
+        return new Installation(container.getId(), container.getVersion().orElse("Unknown"),
+            container.getSource().orElse(null));
     }
 
     @Override
