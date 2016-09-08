@@ -37,7 +37,8 @@ public final class Messages {
     // Messages
     public static final TextTemplate INSTALLING = of(YELLOW, "Installing plugin ", PLUGIN_ID, "...");
     public static final TextTemplate UPDATING = of(YELLOW, "Updating plugin ", PLUGIN_ID, "...");
-    public static final TextTemplate SEARCHING = of(YELLOW, "Searching...");
+    public static final TextTemplate FINDING = of(YELLOW, "Finding ", PLUGIN_ID, "...");
+    public static final TextTemplate NOT_FOUND = of(RED, "Plugin ", PLUGIN_ID, " not found.");
 
     public static final TextTemplate NAME = of(YELLOW, BOLD, "Name: ", CONTENT);
     public static final TextTemplate ID = of(YELLOW, BOLD, "ID: ", CONTENT);
@@ -51,6 +52,12 @@ public final class Messages {
     public static final Text NOT_INSTALLED = Text.of(RED, "Not installed");
     public static final Text YES = Text.of("Yes");
     public static final Text NO_NEEDS_RESTART = Text.of("No (needs restart)");
+    public static final Text SEARCHING = Text.of(YELLOW, "Searching...");
+
+    public static final TextTemplate AVAILABLE_UPDATES = of(
+        YELLOW, "There are ", CONTENT, " updates available for download.");
+
+    public static final TextTemplate UPDATE = of(arg("pluginId").color(YELLOW).style(BOLD), ": ", CONTENT);
 
     public static final TextTemplate VERSION = of(
         YELLOW, "Currently running ", arg("name").color(GREEN), " v", arg("version").color(GREEN));

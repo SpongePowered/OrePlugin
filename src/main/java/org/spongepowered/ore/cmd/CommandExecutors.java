@@ -77,11 +77,13 @@ public final class CommandExecutors {
     public CommandResult installPlugin(CommandSource src, CommandContext context) {
         String pluginId = context.<String>getOne("pluginId").get();
         String version = context.<String>getOne("version").orElse(VERSION_RECOMMENDED);
+        src.sendMessage(INSTALLING.apply(tuplePid(pluginId)).build());
         this.plugin.newAsyncTask(TASK_NAME_DOWNLOAD, src, () -> {
-            src.sendMessage(INSTALLING.apply(tuplePid(pluginId)).build());
             this.client.installPlugin(pluginId, version);
-            src.sendMessage(DOWNLOAD_RESTART_SERVER.apply(ImmutableMap.of("pluginId", of(pluginId), "phase",
-                of("installation"))).build());
+            src.sendMessage(DOWNLOAD_RESTART_SERVER.apply(ImmutableMap.of(
+                "pluginId", of(pluginId),
+                "phase", of("installation")
+            )).build());
             return null;
         });
         return CommandResult.success();
@@ -114,12 +116,13 @@ public final class CommandExecutors {
     public CommandResult updatePlugin(CommandSource src, CommandContext context) {
         String pluginId = context.<String>getOne("pluginId").get();
         String version = context.<String>getOne("version").orElse(VERSION_RECOMMENDED);
+        src.sendMessage(UPDATING.apply(tuplePid(pluginId)).build());
         this.plugin.newAsyncTask(TASK_NAME_DOWNLOAD, src, () -> {
-            src.sendMessage(UPDATING.apply(tuplePid(pluginId)).build());
             this.client.downloadUpdate(pluginId, version);
             src.sendMessage(DOWNLOAD_RESTART_SERVER.apply(ImmutableMap.of(
                 "pluginId", of(pluginId),
-                "phase", of("update"))).build());
+                "phase", of("update")
+            )).build());
             return null;
         });
         return CommandResult.success();
@@ -134,8 +137,8 @@ public final class CommandExecutors {
      */
     public CommandResult searchForPlugins(CommandSource src, CommandContext context) {
         String query = context.<String>getOne("query").get();
+        src.sendMessage(SEARCHING);
         this.plugin.newAsyncTask(TASK_NAME_SEARCH, src, () -> {
-            src.sendMessage(SEARCHING.apply().build());
             PaginationList.builder()
                 .title(of(YELLOW, TASK_NAME_SEARCH))
                 .padding(of(BLUE, '-'))
@@ -157,47 +160,48 @@ public final class CommandExecutors {
      * @return result of command
      */
     public CommandResult showPlugin(CommandSource src, CommandContext context) {
-        Optional<Project> projectOpt = ((CommandTry<Optional<Project>>) () ->
-            this.client.getProject(context.<String>getOne("pluginId").get())
-        ).callFor(src);
+        String pluginId = context.<String>getOne("pluginId").get();
+        src.sendMessage(FINDING.apply(tuplePid(pluginId)).build());
+        this.plugin.newAsyncTask(TASK_NAME_SEARCH, src, () -> {
+            Optional<Project> projectOpt = this.client.getProject(pluginId);
+            if (projectOpt.isPresent()) {
+                Project project = projectOpt.get();
 
-        if (projectOpt.isPresent()) {
-            Project project = projectOpt.get();
-            String pluginId = project.getPluginId();
+                // Installed version
+                Text version = NOT_INSTALLED;
+                Optional<Installation> installOpt = this.client.getInstallation(pluginId);
+                boolean installed = installOpt.isPresent();
+                if (installed)
+                    version = of(installOpt.get().getVersion());
 
-            // Installed version
-            Text version = NOT_INSTALLED;
-            Optional<Installation> installOpt = this.client.getInstallation(pluginId);
-            boolean installed = installOpt.isPresent();
-            if (installed)
-                version = of(installOpt.get().getVersion());
-
-            Text recommended = of(project.getRecommendedVersion().getName());
-            Text.Builder message = NAME.apply(ImmutableMap.of("content", of(project.getName())))
-                .append(NEW_LINE)
-                .append(ID.apply(ImmutableMap.of("content", of(project.getPluginId()))).build())
-                .append(NEW_LINE)
-                .append(AUTHOR.apply(ImmutableMap.of("content", of(project.getOwnerName()))).build())
-                .append(NEW_LINE)
-                .append(CATEGORY.apply(ImmutableMap.of("content", of(project.getCategory().getTitle()))).build())
-                .append(NEW_LINE)
-                .append(INSTALLED_VERSION.apply(ImmutableMap.of("content", version)).build())
-                .append(NEW_LINE)
-                .append(RECOMMENDED_VERSION.apply(ImmutableMap.of("content", recommended)).build());
-
-            if (installed) {
-                // Additional install information
-                Text answer = this.game.getPluginManager().isLoaded(pluginId) ? YES : NO_NEEDS_RESTART;
-                Text path = of(installOpt.get().getPath().toAbsolutePath().toString());
-                message.append(NEW_LINE)
-                    .append(LOADED.apply(ImmutableMap.of("content", answer)).build())
+                Text recommended = of(project.getRecommendedVersion().getName());
+                Text.Builder message = NAME.apply(ImmutableMap.of("content", of(project.getName())))
                     .append(NEW_LINE)
-                    .append(LOCATION.apply(ImmutableMap.of("content", path)).build());
-            }
+                    .append(ID.apply(ImmutableMap.of("content", of(project.getPluginId()))).build())
+                    .append(NEW_LINE)
+                    .append(AUTHOR.apply(ImmutableMap.of("content", of(project.getOwnerName()))).build())
+                    .append(NEW_LINE)
+                    .append(CATEGORY.apply(ImmutableMap.of("content", of(project.getCategory().getTitle()))).build())
+                    .append(NEW_LINE)
+                    .append(INSTALLED_VERSION.apply(ImmutableMap.of("content", version)).build())
+                    .append(NEW_LINE)
+                    .append(RECOMMENDED_VERSION.apply(ImmutableMap.of("content", recommended)).build());
 
-            src.sendMessage(message.build());
-        }
+                if (installed) {
+                    // Additional install information
+                    Text answer = this.game.getPluginManager().isLoaded(pluginId) ? YES : NO_NEEDS_RESTART;
+                    Text path = of(installOpt.get().getPath().toAbsolutePath().toString());
+                    message.append(NEW_LINE)
+                        .append(LOADED.apply(ImmutableMap.of("content", answer)).build())
+                        .append(NEW_LINE)
+                        .append(LOCATION.apply(ImmutableMap.of("content", path)).build());
+                }
 
+                src.sendMessage(message.build());
+            } else
+                src.sendMessage(NOT_FOUND.apply(tuplePid(pluginId)).build());
+            return null;
+        });
         return CommandResult.success();
     }
 

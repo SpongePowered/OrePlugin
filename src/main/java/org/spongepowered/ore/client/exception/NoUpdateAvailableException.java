@@ -1,6 +1,6 @@
 package org.spongepowered.ore.client.exception;
 
-public class NoUpdateAvailableException extends Exception {
+public final class NoUpdateAvailableException extends OreException {
 
     public NoUpdateAvailableException(String pluginId) {
         super("No update available for Plugin \"" + pluginId + "\".");

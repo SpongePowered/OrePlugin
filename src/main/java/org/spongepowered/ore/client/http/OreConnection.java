@@ -2,10 +2,12 @@ package org.spongepowered.ore.client.http;
 
 import com.google.gson.Gson;
 import org.spongepowered.ore.client.OreClient;
+import org.spongepowered.ore.client.exception.OreConnectException;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Optional;
@@ -15,12 +17,14 @@ import java.util.Optional;
  */
 public class OreConnection {
 
+    private final OreClient client;
     private final Gson gson = new Gson();
     private final URL routeUrl;
     protected InputStream in;
     protected HttpURLConnection http;
 
     protected OreConnection(OreClient client, String route, String queryString, Object... params) {
+        this.client = client;
         this.routeUrl = client.getRouteUrl(route, queryString, params);
     }
 
@@ -54,9 +58,13 @@ public class OreConnection {
      */
     public OreConnection open() throws IOException {
         // Establish connection
-        this.http = (HttpURLConnection) this.routeUrl.openConnection();
-        this.in = this.http.getInputStream();
-        return this;
+        try {
+            this.http = (HttpURLConnection) this.routeUrl.openConnection();
+            this.in = this.http.getInputStream();
+            return this;
+        } catch (ConnectException e) {
+            throw new OreConnectException(this.client.getRootUrl().toString());
+        }
     }
 
     /**

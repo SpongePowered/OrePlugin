@@ -30,9 +30,10 @@ public interface CommandTry<V> extends Callable<V> {
             return call();
         } catch (Exception e) {
             src.sendMessage(Text.of(TextColors.RED, e.getMessage()));
+            if (e instanceof RuntimeException)
+                throw (RuntimeException) e;
             throw new RuntimeException(e);
         }
     }
-
 
 }

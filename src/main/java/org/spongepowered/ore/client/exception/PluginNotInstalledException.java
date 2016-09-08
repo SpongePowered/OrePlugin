@@ -1,6 +1,6 @@
 package org.spongepowered.ore.client.exception;
 
-public class PluginNotInstalledException extends Exception {
+public final class PluginNotInstalledException extends OreException {
 
     public PluginNotInstalledException(String id) {
         super("Plugin \"" + id + "\" is not installed.");

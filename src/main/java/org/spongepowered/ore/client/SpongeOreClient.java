@@ -92,7 +92,8 @@ public final class SpongeOreClient implements OreClient {
     }
 
     @Override
-    public void installPlugin(String id, String version) throws IOException, PluginAlreadyInstalledException {
+    public void installPlugin(String id, String version)
+        throws IOException, PluginAlreadyInstalledException, PluginNotFoundException {
         checkNotInstalled(id);
 
         // A plugin can be uninstalled but still loaded, download to updates
@@ -126,19 +127,34 @@ public final class SpongeOreClient implements OreClient {
     @Override
     public boolean isUpdateAvailable(String id) throws IOException, PluginNotInstalledException {
         checkInstalled(id);
-        Project project = OreConnection.open(this, PROJECT, id).read(Project.class);
 
-        String currentVersion = this.pluginManager.getPlugin(id)
-            .<String>map(plugin -> plugin.getVersion().orElse(""))
-            .orElse(this.newInstalls.get(id).getVersion());
+        // Make sure project is on Ore
+        Optional<Project> projectOpt = getProject(id);
+        if (!projectOpt.isPresent())
+            return false;
 
+        // Compare Ore version to installed version
+        String currentVersion = getInstallation(id).get().getVersion();
         return !currentVersion.equals(VERSION_RECOMMENDED)
-            && !currentVersion.equals(project.getRecommendedVersion().getName());
+            && !currentVersion.equals(projectOpt.get().getRecommendedVersion().getName());
+    }
+
+    @Override
+    public Map<PluginContainer, String> getAvailableUpdates() throws IOException {
+        Map<PluginContainer, String> updates = new HashMap<>();
+        for (PluginContainer plugin : this.pluginManager.getPlugins()) {
+            getProject(plugin.getId()).ifPresent(project -> {
+                String recommended = project.getRecommendedVersion().getName();
+                if (!recommended.equals(plugin.getVersion().orElse(null)))
+                    updates.put(plugin, recommended);
+            });
+        }
+        return updates;
     }
 
     @Override
     public void downloadUpdate(String id, String version)
-        throws IOException, PluginNotInstalledException, NoUpdateAvailableException {
+        throws IOException, PluginNotInstalledException, PluginNotFoundException, NoUpdateAvailableException {
         checkInstalled(id);
         if (version.equals(VERSION_RECOMMENDED) && !isUpdateAvailable(id))
             throw new NoUpdateAvailableException(id);
@@ -213,7 +229,11 @@ public final class SpongeOreClient implements OreClient {
 
     @Override
     public Optional<Project> getProject(String id) throws IOException {
-        return Optional.ofNullable(OreConnection.open(this, PROJECT, id).read(Project.class));
+        try {
+            return Optional.of(OreConnection.open(this, PROJECT, id).read(Project.class));
+        } catch (FileNotFoundException e) {
+            return Optional.empty();
+        }
     }
 
     private Path downloadPlugin(String id, String version, Path targetDir, Map<String, Installation> downloadMap)

@@ -1,7 +1,9 @@
 package org.spongepowered.ore.client;
 
+import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.ore.client.exception.NoUpdateAvailableException;
 import org.spongepowered.ore.client.exception.PluginAlreadyInstalledException;
+import org.spongepowered.ore.client.exception.PluginNotFoundException;
 import org.spongepowered.ore.client.exception.PluginNotInstalledException;
 import org.spongepowered.ore.client.http.HttpUtils;
 import org.spongepowered.ore.client.model.Project;
@@ -11,6 +13,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import javax.annotation.Nullable;
@@ -82,13 +85,22 @@ public interface OreClient {
      *
      * @param id Plugin ID
      * @param version Plugin version
+     * @throws IOException
+     * @throws PluginAlreadyInstalledException if a plugin with the specified
+     *         ID is already installed
+     * @throws PluginNotFoundException if a plugin with the specified ID
+     *         cannot be found on Ore
      */
-    void installPlugin(String id, String version) throws IOException, PluginAlreadyInstalledException;
+    void installPlugin(String id, String version)
+        throws IOException, PluginAlreadyInstalledException, PluginNotFoundException;
 
     /**
      * Uninstalls a plugin.
      *
      * @param id ID of plugin to uninstall
+     * @throws IOException
+     * @throws PluginNotInstalledException if there is no plugin with the
+     *         specified ID installed
      */
     void uninstallPlugin(String id) throws IOException, PluginNotInstalledException;
 
@@ -98,17 +110,35 @@ public interface OreClient {
      *
      * @param id plugin ID
      * @return True if there is an update available
+     * @throws IOException
+     * @throws PluginNotInstalledException if there is no plugin installed
+     *         with the specified ID
      */
     boolean isUpdateAvailable(String id) throws IOException, PluginNotInstalledException;
+
+    /**
+     * Returns any available updates among loaded plugins.
+     *
+     * @return A map of plugin ID -> new version
+     * @throws IOException
+     */
+    Map<PluginContainer, String> getAvailableUpdates() throws IOException;
 
     /**
      * Downloads an update for a plugin of the specified ID.
      *
      * @param id Plugin ID
      * @param version Plugin version
+     * @throws IOException
+     * @throws PluginNotInstalledException if there is no plugin with the
+     *         specified ID installed
+     * @throws PluginNotFoundException if there is no plugin on Ore with the
+     *         specified ID
+     * @throws NoUpdateAvailableException if there is no update available for
+     *         the specified plugin on Ore
      */
     void downloadUpdate(String id, String version)
-        throws IOException, PluginNotInstalledException, NoUpdateAvailableException;
+        throws IOException, PluginNotInstalledException, PluginNotFoundException, NoUpdateAvailableException;
 
     /**
      * Returns true if there are any updates to apply.
@@ -126,6 +156,7 @@ public interface OreClient {
 
     /**
      * Applies all updates that are currently pending.
+     * @throws IOException
      */
     void installUpdates() throws IOException;
 
@@ -145,6 +176,7 @@ public interface OreClient {
 
     /**
      * Deletes pending uninstallations.
+     * @throws IOException
      */
     void completeUninstallations() throws IOException;
 
@@ -152,6 +184,7 @@ public interface OreClient {
      * Retrieves and returns a {@link Project} of the specified ID.
      *
      * @return Project if exists, empty otherwise
+     * @throws IOException
      */
     Optional<Project> getProject(String id) throws IOException;
 
@@ -160,6 +193,7 @@ public interface OreClient {
      *
      * @param query Query for search
      * @return List of projects matching query
+     * @throws IOException
      */
     List<Project> searchProjects(String query) throws IOException;
 

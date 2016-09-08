@@ -1,8 +1,6 @@
 package org.spongepowered.ore.client.exception;
 
-import java.io.FileNotFoundException;
-
-public class PluginNotFoundException extends FileNotFoundException {
+public final class PluginNotFoundException extends OreException {
 
     public PluginNotFoundException(String pluginId) {
         super("Plugin \"" + pluginId + "\" could not be found.");

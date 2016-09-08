@@ -1,8 +1,16 @@
 package org.spongepowered.ore;
 
+import static org.spongepowered.api.text.Text.Builder;
+import static org.spongepowered.api.text.Text.NEW_LINE;
+import static org.spongepowered.api.text.Text.of;
+import static org.spongepowered.ore.Messages.AVAILABLE_UPDATES;
+import static org.spongepowered.ore.Messages.UPDATE;
+
+import com.google.common.collect.ImmutableMap;
 import org.slf4j.Logger;
 import org.spongepowered.api.Game;
 import org.spongepowered.api.command.CommandSource;
+import org.spongepowered.api.command.source.ConsoleSource;
 import org.spongepowered.api.config.DefaultConfig;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.Order;
@@ -19,6 +27,7 @@ import org.spongepowered.ore.config.OreConfig;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Map;
 
 import javax.inject.Inject;
 
@@ -41,13 +50,14 @@ public final class OrePlugin {
     private OreClient client;
     private OreConfig config;
 
-    @Listener
+    @Listener(order = Order.POST)
     public void onStart(GameStartedServerEvent event) throws IOException {
         this.log.info("Initializing...");
         this.config = OreConfig.load(this.configPath);
         this.client = new SpongeOreClient(this.config.getRepositoryUrl(), this.config.getInstallationDirectory(),
             this.config.getUpdatesDirectory(), this.game.getPluginManager());
         new CommandExecutors(this).register();
+        checkForUpdates();
         this.log.info("Done.");
     }
 
@@ -98,6 +108,23 @@ public final class OrePlugin {
             .async()
             .execute(() -> callable.callFor(src))
             .submit(this);
+    }
+
+    private void checkForUpdates() {
+        this.log.info("Checking for updates...");
+        ConsoleSource console = this.game.getServer().getConsole();
+        newAsyncTask(CommandExecutors.TASK_NAME_SEARCH, console, () -> {
+            Map<PluginContainer, String> updates = this.client.getAvailableUpdates();
+            Builder message = AVAILABLE_UPDATES.apply(ImmutableMap.of("content", of(updates.size())));
+            for (PluginContainer update : updates.keySet()) {
+                message.append(NEW_LINE).append(UPDATE.apply(ImmutableMap.of(
+                    "pluginId", of(update.getId()),
+                    "content", of(updates.get(update))
+                )).build());
+            }
+            console.sendMessage(message.build());
+            return null;
+        });
     }
 
 }
