@@ -9,11 +9,13 @@ import static java.nio.file.Files.exists;
 import static java.nio.file.Files.move;
 import static org.spongepowered.ore.client.Routes.PROJECT;
 import static org.spongepowered.ore.client.Routes.PROJECT_LIST;
+import static org.spongepowered.ore.client.Routes.USER;
 
 import org.apache.commons.io.FileUtils;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.plugin.PluginManager;
+import org.spongepowered.ore.OrePlugin;
 import org.spongepowered.ore.client.exception.NoUpdateAvailableException;
 import org.spongepowered.ore.client.exception.PluginAlreadyInstalledException;
 import org.spongepowered.ore.client.exception.PluginNotFoundException;
@@ -21,6 +23,8 @@ import org.spongepowered.ore.client.exception.PluginNotInstalledException;
 import org.spongepowered.ore.client.http.OreConnection;
 import org.spongepowered.ore.client.http.PluginDownload;
 import org.spongepowered.ore.client.model.Project;
+import org.spongepowered.ore.client.model.User;
+import org.spongepowered.ore.config.OreConfig;
 import org.spongepowered.plugin.meta.PluginMetadata;
 
 import java.io.FileNotFoundException;
@@ -45,15 +49,19 @@ public final class SpongeOreClient implements OreClient {
 
     private final PluginManager pluginManager;
     private final URL rootUrl;
-    private final Path modsDir, updatesDir;
+    private final Path modsDir, updatesDir, downloadsDir;
     private final Map<String, Installation> newInstalls = new HashMap<>();
     private final Map<String, Installation> updatesToInstall = new HashMap<>();
     private final Set<PluginContainer> toRemove = new HashSet<>();
+    private final Set<String> ignoredPlugins;
 
-    public SpongeOreClient(URL rootUrl, Path modsDir, Path updatesDir, PluginManager pluginManager) {
+    public SpongeOreClient(URL rootUrl, Path modsDir, Path updatesDir, Path downloadsDir,
+        Set<String> ignoredPlugins, PluginManager pluginManager) {
         this.rootUrl = rootUrl;
         this.modsDir = modsDir;
         this.updatesDir = updatesDir;
+        this.downloadsDir = downloadsDir;
+        this.ignoredPlugins = ignoredPlugins;
         this.pluginManager = pluginManager;
     }
 
@@ -89,6 +97,11 @@ public final class SpongeOreClient implements OreClient {
             return Optional.of(install);
 
         return this.pluginManager.getPlugin(id).map(Installation::fromContainer);
+    }
+
+    @Override
+    public void downloadPlugin(String id, String version) throws IOException, PluginNotFoundException {
+        this.downloadPlugin(id, version, this.downloadsDir, null);
     }
 
     @Override
@@ -143,7 +156,11 @@ public final class SpongeOreClient implements OreClient {
     public Map<PluginContainer, String> getAvailableUpdates() throws IOException {
         Map<PluginContainer, String> updates = new HashMap<>();
         for (PluginContainer plugin : this.pluginManager.getPlugins()) {
-            getProject(plugin.getId()).ifPresent(project -> {
+            String id = plugin.getId();
+            if (this.ignoredPlugins.contains(id))
+                continue;
+
+            getProject(id).ifPresent(project -> {
                 String recommended = project.getRecommendedVersion().getName();
                 if (!recommended.equals(plugin.getVersion().orElse(null)))
                     updates.put(plugin, recommended);
@@ -153,7 +170,7 @@ public final class SpongeOreClient implements OreClient {
     }
 
     @Override
-    public void downloadUpdate(String id, String version)
+    public void updatePlugin(String id, String version)
         throws IOException, PluginNotInstalledException, PluginNotFoundException, NoUpdateAvailableException {
         checkInstalled(id);
         if (version.equals(VERSION_RECOMMENDED) && !isUpdateAvailable(id))
@@ -228,16 +245,25 @@ public final class SpongeOreClient implements OreClient {
     }
 
     @Override
+    public Optional<User> getUser(String username) throws IOException {
+        try {
+            return Optional.ofNullable(OreConnection.open(this, USER, username).read(User.class));
+        } catch (FileNotFoundException e) {
+            return Optional.empty();
+        }
+    }
+
+    @Override
     public Optional<Project> getProject(String id) throws IOException {
         try {
-            return Optional.of(OreConnection.open(this, PROJECT, id).read(Project.class));
+            return Optional.ofNullable(OreConnection.open(this, PROJECT, id).read(Project.class));
         } catch (FileNotFoundException e) {
             return Optional.empty();
         }
     }
 
     private Path downloadPlugin(String id, String version, Path targetDir, Map<String, Installation> downloadMap)
-        throws IOException {
+        throws IOException, PluginNotFoundException {
         // Initialize download
         PluginDownload download;
         try {
@@ -247,7 +273,7 @@ public final class SpongeOreClient implements OreClient {
         }
 
         // Override already pending installs/updates
-        if (downloadMap.containsKey(id))
+        if (downloadMap != null && downloadMap.containsKey(id))
             delete(downloadMap.remove(id).getPath());
 
         // Copy to target file
@@ -256,7 +282,8 @@ public final class SpongeOreClient implements OreClient {
         createFile(target);
 
         copy(download.getInputStream().get(), target, StandardCopyOption.REPLACE_EXISTING);
-        downloadMap.put(id, new Installation(id, version, target));
+        if (downloadMap != null)
+            downloadMap.put(id, new Installation(id, version, target));
         return target;
     }
 
@@ -275,6 +302,20 @@ public final class SpongeOreClient implements OreClient {
     private void checkInstalled(String id) throws PluginNotInstalledException {
         if (!isInstalled(id))
             throw new PluginNotInstalledException(id);
+    }
+
+    /**
+     * Constructs a new client from for the specified plugin.
+     *
+     * @param plugin Plugin to create client for
+     * @return New client
+     */
+    public static SpongeOreClient forPlugin(OrePlugin plugin) {
+        OreConfig config = plugin.getConfig();
+        return new SpongeOreClient(
+            config.getRepositoryUrl(), config.getInstallationDirectory(), config.getUpdatesDirectory(),
+            config.getDownloadsDirectory(), config.getIgnoredPlugins(), plugin.game.getPluginManager()
+        );
     }
 
 }

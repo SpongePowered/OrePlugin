@@ -6,6 +6,7 @@ import static java.nio.file.Files.newInputStream;
 import static java.nio.file.Files.notExists;
 import static java.nio.file.Files.write;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -15,6 +16,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Ore configuration options.
@@ -28,9 +32,12 @@ public final class OreConfig {
         .registerTypeAdapter(URL.class, new UrlTypeAdapter())
         .create();
 
-    private URL repositoryUrl = new URL("http://ore-staging.spongepowered.org");
-    private Path installationDirectory = Paths.get("./mods");
-    private Path updatesDirectory = Paths.get("./updates");
+    private URL repositoryUrl = new URL("https://ore-staging.spongepowered.org");
+    private Path installationDirectory = Paths.get("mods").toAbsolutePath();
+    private Path updatesDirectory = Paths.get("updates").toAbsolutePath();
+    private Path downloadsDirectory = Paths.get("downloads").toAbsolutePath();
+    private boolean autoResolveDependencies = true;
+    private List<String> ignoredPlugins = Arrays.asList("Minecraft", "mcp", "FML", "Forge", "sponge", "ore");
 
     private OreConfig() throws MalformedURLException {}
 
@@ -60,6 +67,35 @@ public final class OreConfig {
      */
     public Path getUpdatesDirectory() {
         return this.updatesDirectory;
+    }
+
+    /**
+     * Returns the directory in which Ore should store plugin downloads that are not to
+     * be installed.
+     *
+     * @return Downloads directory
+     */
+    public Path getDownloadsDirectory() {
+        return this.downloadsDirectory;
+    }
+
+    /**
+     * Returns true if plugin dependencies should be automatically resolved
+     * when updating or installing.
+     *
+     * @return True if should automatically resolve dependencies
+     */
+    public boolean getAutoResolveDependencies() {
+        return this.autoResolveDependencies;
+    }
+
+    /**
+     * Returns a list of plugin IDs which should be ignored by Ore.
+     *
+     * @return Plugins to ignore
+     */
+    public Set<String> getIgnoredPlugins() {
+        return ImmutableSet.copyOf(this.ignoredPlugins);
     }
 
     /**

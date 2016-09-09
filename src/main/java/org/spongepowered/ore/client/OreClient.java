@@ -7,6 +7,7 @@ import org.spongepowered.ore.client.exception.PluginNotFoundException;
 import org.spongepowered.ore.client.exception.PluginNotInstalledException;
 import org.spongepowered.ore.client.http.HttpUtils;
 import org.spongepowered.ore.client.model.Project;
+import org.spongepowered.ore.client.model.User;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -81,6 +82,14 @@ public interface OreClient {
     Optional<Installation> getInstallation(String id);
 
     /**
+     * Downloads but does not install a plugin with the specified ID.
+     *
+     * @param id Plugin ID
+     * @param version Plugin version
+     */
+    void downloadPlugin(String id, String version) throws IOException, PluginNotFoundException;
+
+    /**
      * Installs a plugin of the specified ID.
      *
      * @param id Plugin ID
@@ -137,7 +146,7 @@ public interface OreClient {
      * @throws NoUpdateAvailableException if there is no update available for
      *         the specified plugin on Ore
      */
-    void downloadUpdate(String id, String version)
+    void updatePlugin(String id, String version)
         throws IOException, PluginNotInstalledException, PluginNotFoundException, NoUpdateAvailableException;
 
     /**
@@ -179,6 +188,15 @@ public interface OreClient {
      * @throws IOException
      */
     void completeUninstallations() throws IOException;
+
+    /**
+     * Retrieves and returns a {@link User} of the specified username.
+     *
+     * @param username The user's username
+     * @return User if exists, empty otherwise
+     * @throws IOException
+     */
+    Optional<User> getUser(String username) throws IOException;
 
     /**
      * Retrieves and returns a {@link Project} of the specified ID.

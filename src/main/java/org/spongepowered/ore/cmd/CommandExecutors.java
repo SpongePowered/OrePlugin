@@ -2,9 +2,32 @@ package org.spongepowered.ore.cmd;
 
 import static org.spongepowered.api.text.Text.NEW_LINE;
 import static org.spongepowered.api.text.Text.of;
-import static org.spongepowered.api.text.format.TextColors.BLUE;
 import static org.spongepowered.api.text.format.TextColors.YELLOW;
-import static org.spongepowered.ore.Messages.*;
+import static org.spongepowered.ore.Messages.AUTHOR;
+import static org.spongepowered.ore.Messages.CATEGORY;
+import static org.spongepowered.ore.Messages.DESCRIPTION;
+import static org.spongepowered.ore.Messages.DOWNLOADING;
+import static org.spongepowered.ore.Messages.DOWNLOAD_COMPLETE;
+import static org.spongepowered.ore.Messages.DOWNLOAD_RESTART_SERVER;
+import static org.spongepowered.ore.Messages.FINDING;
+import static org.spongepowered.ore.Messages.ID;
+import static org.spongepowered.ore.Messages.INSTALLED_VERSION;
+import static org.spongepowered.ore.Messages.INSTALLING;
+import static org.spongepowered.ore.Messages.LOADED;
+import static org.spongepowered.ore.Messages.LOCATION;
+import static org.spongepowered.ore.Messages.NAME;
+import static org.spongepowered.ore.Messages.NOT_INSTALLED;
+import static org.spongepowered.ore.Messages.NO_NEEDS_RESTART;
+import static org.spongepowered.ore.Messages.PLUGIN_NOT_FOUND;
+import static org.spongepowered.ore.Messages.RECOMMENDED_VERSION;
+import static org.spongepowered.ore.Messages.RELOAD_COMPLETE;
+import static org.spongepowered.ore.Messages.REMOVAL;
+import static org.spongepowered.ore.Messages.SEARCHING;
+import static org.spongepowered.ore.Messages.UPDATING;
+import static org.spongepowered.ore.Messages.USER_NOT_FOUND;
+import static org.spongepowered.ore.Messages.VERSION;
+import static org.spongepowered.ore.Messages.YES;
+import static org.spongepowered.ore.Messages.listBuilder;
 import static org.spongepowered.ore.Messages.tuplePid;
 import static org.spongepowered.ore.client.SpongeOreClient.VERSION_RECOMMENDED;
 
@@ -13,12 +36,12 @@ import org.spongepowered.api.Game;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
-import org.spongepowered.api.service.pagination.PaginationList;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.ore.OrePlugin;
 import org.spongepowered.ore.client.Installation;
 import org.spongepowered.ore.client.OreClient;
 import org.spongepowered.ore.client.model.Project;
+import org.spongepowered.ore.client.model.User;
 
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -49,7 +72,23 @@ public final class CommandExecutors {
      * Registers the executors with Sponge.
      */
     public void register() {
-        this.game.getCommandManager().register(this.plugin, new CommandSpecs(this).getRoot(), "ore");
+        this.game.getCommandManager().register(this.plugin, new CommandSpecs(this).getRootSpec(), "ore");
+    }
+
+    /**
+     * Reloads the plugin's configuration file.
+     *
+     * @param src source of command
+     * @param context command context
+     * @return command result
+     */
+    public CommandResult reloadConfig(CommandSource src, CommandContext context) {
+        ((CommandTry) () -> {
+            this.plugin.loadConfig();
+            src.sendMessage(RELOAD_COMPLETE);
+            return null;
+        }).callFor(src);
+        return CommandResult.success();
     }
 
     /**
@@ -62,7 +101,7 @@ public final class CommandExecutors {
     public CommandResult showVersion(CommandSource src, CommandContext context) {
         src.sendMessage(VERSION.apply(ImmutableMap.of(
             "name", of(this.plugin.self.getName()),
-            "version", of(this.plugin.self.getVersion())
+            "version", of(this.plugin.self.getVersion().get())
         )).build());
         return CommandResult.success();
     }
@@ -84,6 +123,25 @@ public final class CommandExecutors {
                 "pluginId", of(pluginId),
                 "phase", of("installation")
             )).build());
+            return null;
+        });
+        return CommandResult.success();
+    }
+
+    /**
+     * Downloads a plugin to the downloads directory.
+     *
+     * @param src source of command
+     * @param context CommandContext
+     * @return result of command
+     */
+    public CommandResult downloadPlugin(CommandSource src, CommandContext context) {
+        String pluginId = context.<String>getOne("pluginId").get();
+        String version = context.<String>getOne("version").orElse(VERSION_RECOMMENDED);
+        src.sendMessage(DOWNLOADING.apply(tuplePid(pluginId)).build());
+        this.plugin.newAsyncTask(TASK_NAME_DOWNLOAD, src, () -> {
+            this.client.downloadPlugin(pluginId, version);
+            src.sendMessage(DOWNLOAD_COMPLETE);
             return null;
         });
         return CommandResult.success();
@@ -118,7 +176,7 @@ public final class CommandExecutors {
         String version = context.<String>getOne("version").orElse(VERSION_RECOMMENDED);
         src.sendMessage(UPDATING.apply(tuplePid(pluginId)).build());
         this.plugin.newAsyncTask(TASK_NAME_DOWNLOAD, src, () -> {
-            this.client.downloadUpdate(pluginId, version);
+            this.client.updatePlugin(pluginId, version);
             src.sendMessage(DOWNLOAD_RESTART_SERVER.apply(ImmutableMap.of(
                 "pluginId", of(pluginId),
                 "phase", of("update")
@@ -139,14 +197,38 @@ public final class CommandExecutors {
         String query = context.<String>getOne("query").get();
         src.sendMessage(SEARCHING);
         this.plugin.newAsyncTask(TASK_NAME_SEARCH, src, () -> {
-            PaginationList.builder()
-                .title(of(YELLOW, TASK_NAME_SEARCH))
-                .padding(of(BLUE, '-'))
-                .contents(this.client.searchProjects(query).stream()
+            listBuilder(of(YELLOW, TASK_NAME_SEARCH)).contents(
+                this.client.searchProjects(query).stream()
                     .<Text>map(project -> ((CommandTry<Text>) () ->
                         ProjectListItem.of(this.plugin, project).toText()).callFor(src))
-                    .collect(Collectors.toList()))
-                .sendTo(src);
+                    .collect(Collectors.toList())
+            ).sendTo(src);
+            return null;
+        });
+        return CommandResult.success();
+    }
+
+    /**
+     * Lists projects by the specified user.
+     *
+     * @param src source of command
+     * @param context CommandContext
+     * @return command result
+     */
+    public CommandResult showUser(CommandSource src, CommandContext context) {
+        String username = context.<String>getOne("username").get();
+        src.sendMessage(FINDING.apply(tuplePid(username)).build());
+        this.plugin.newAsyncTask(TASK_NAME_SEARCH, src, () -> {
+            Optional<User> userOpt = this.client.getUser(username);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                listBuilder(of(YELLOW, user.getUsername())).contents(
+                    user.getProjects().stream().<Text>map(project -> ((CommandTry<Text>) () ->
+                        ProjectListItem.of(this.plugin, project).toText()).callFor(src))
+                    .collect(Collectors.toList())
+                ).sendTo(src);
+            } else
+                src.sendMessage(USER_NOT_FOUND.apply(ImmutableMap.of("username", of(username))).build());
             return null;
         });
         return CommandResult.success();
@@ -199,7 +281,29 @@ public final class CommandExecutors {
 
                 src.sendMessage(message.build());
             } else
-                src.sendMessage(NOT_FOUND.apply(tuplePid(pluginId)).build());
+                src.sendMessage(PLUGIN_NOT_FOUND.apply(tuplePid(pluginId)).build());
+            return null;
+        });
+        return CommandResult.success();
+    }
+
+    /**
+     * Displays the description of a plugin.
+     *
+     * @param src source of command
+     * @param context CommandContext
+     * @return command result
+     */
+    public CommandResult describePlugin(CommandSource src, CommandContext context) {
+        String pluginId = context.<String>getOne("pluginId").get();
+        src.sendMessage(FINDING.apply(tuplePid(pluginId)).build());
+        this.plugin.newAsyncTask(TASK_NAME_SEARCH, src, () -> {
+            Optional<Project> projectOpt = this.client.getProject(pluginId);
+            if (projectOpt.isPresent()) {
+                String description = projectOpt.get().getDescription();
+                src.sendMessage(DESCRIPTION.apply(ImmutableMap.of("description", of(description))).build());
+            } else
+                src.sendMessage(PLUGIN_NOT_FOUND.apply(tuplePid(pluginId)).build());
             return null;
         });
         return CommandResult.success();

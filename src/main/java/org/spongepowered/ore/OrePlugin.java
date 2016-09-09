@@ -34,8 +34,8 @@ import javax.inject.Inject;
 /**
  * Main plugin class for Ore.
  */
-@Plugin(id = "ore",
-        name = "OrePlugin",
+@Plugin(id = "Ore",
+        name = "Ore",
         version = "1.0.0",
         description = "Official package manager for Sponge.",
         authors = { "windy" }
@@ -53,9 +53,8 @@ public final class OrePlugin {
     @Listener(order = Order.POST)
     public void onStart(GameStartedServerEvent event) throws IOException {
         this.log.info("Initializing...");
-        this.config = OreConfig.load(this.configPath);
-        this.client = new SpongeOreClient(this.config.getRepositoryUrl(), this.config.getInstallationDirectory(),
-            this.config.getUpdatesDirectory(), this.game.getPluginManager());
+        loadConfig();
+        this.client = SpongeOreClient.forPlugin(this);
         new CommandExecutors(this).register();
         checkForUpdates();
         this.log.info("Done.");
@@ -83,6 +82,15 @@ public final class OrePlugin {
      */
     public OreClient getClient() {
         return this.client;
+    }
+
+    /**
+     * Loads (or reloads) the configuration file.
+     *
+     * @throws IOException
+     */
+    public void loadConfig() throws IOException {
+        this.config = OreConfig.load(this.configPath);
     }
 
     /**

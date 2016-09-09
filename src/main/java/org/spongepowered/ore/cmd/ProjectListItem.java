@@ -104,7 +104,7 @@ public final class ProjectListItem implements TextRepresentable {
     private void onUpdateClick(CommandSource src) {
         this.plugin.newAsyncTask(TASK_NAME_DOWNLOAD, src, () -> {
             src.sendMessage(UPDATING.apply(tuplePid(this.pluginId)).build());
-            this.client.downloadUpdate(this.pluginId, VERSION_RECOMMENDED);
+            this.client.updatePlugin(this.pluginId, VERSION_RECOMMENDED);
             src.sendMessage(DOWNLOAD_RESTART_SERVER.apply(ImmutableMap.of(
                 "pluginId", Text.of(this.pluginId),
                 "phase", Text.of("update")
