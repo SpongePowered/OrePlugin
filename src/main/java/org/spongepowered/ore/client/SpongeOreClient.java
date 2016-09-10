@@ -10,6 +10,7 @@ import static java.nio.file.Files.move;
 import static org.spongepowered.ore.client.Routes.PROJECT;
 import static org.spongepowered.ore.client.Routes.PROJECT_LIST;
 import static org.spongepowered.ore.client.Routes.USER;
+import static org.spongepowered.ore.client.Routes.VERSION;
 
 import org.apache.commons.io.FileUtils;
 import org.spongepowered.api.Sponge;
@@ -22,8 +23,10 @@ import org.spongepowered.ore.client.exception.PluginNotFoundException;
 import org.spongepowered.ore.client.exception.PluginNotInstalledException;
 import org.spongepowered.ore.client.http.OreConnection;
 import org.spongepowered.ore.client.http.PluginDownload;
+import org.spongepowered.ore.client.model.Dependency;
 import org.spongepowered.ore.client.model.Project;
 import org.spongepowered.ore.client.model.User;
+import org.spongepowered.ore.client.model.Version;
 import org.spongepowered.ore.config.OreConfig;
 import org.spongepowered.plugin.meta.PluginMetadata;
 
@@ -54,6 +57,7 @@ public final class SpongeOreClient implements OreClient {
     private final Map<String, Installation> updatesToInstall = new HashMap<>();
     private final Set<PluginContainer> toRemove = new HashSet<>();
     private final Set<String> ignoredPlugins;
+    private Messenger messenger;
 
     public SpongeOreClient(URL rootUrl, Path modsDir, Path updatesDir, Path downloadsDir,
         Set<String> ignoredPlugins, PluginManager pluginManager) {
@@ -63,6 +67,11 @@ public final class SpongeOreClient implements OreClient {
         this.downloadsDir = downloadsDir;
         this.ignoredPlugins = ignoredPlugins;
         this.pluginManager = pluginManager;
+    }
+
+    @Override
+    public void setMessenger(Messenger messenger) {
+        this.messenger = messenger;
     }
 
     @Override
@@ -105,9 +114,41 @@ public final class SpongeOreClient implements OreClient {
     }
 
     @Override
-    public void installPlugin(String id, String version)
+    public void installPlugin(String id, String version, boolean installDependencies)
         throws IOException, PluginAlreadyInstalledException, PluginNotFoundException {
         checkNotInstalled(id);
+
+        if (installDependencies) {
+            // Get intended version's dependencies
+            sendMessage("Finding dependencies...");
+
+            String actualVersion = version;
+            if (version.equals(VERSION_RECOMMENDED))
+                actualVersion = getProject(id).orElseThrow(() -> new PluginNotFoundException(id))
+                    .getRecommendedVersion().getName();
+
+            Version toInstall = getModel(Version.class, VERSION, id, actualVersion)
+                .orElseThrow(() -> new PluginNotFoundException(id));
+
+            for (Dependency depend : toInstall.getDependencies()) {
+                String dependId = depend.getPluginId();
+                String dependVersion = depend.getVersion();
+                sendMessage("Installing " + dependId + " v" + dependVersion + "...");
+                try {
+                    installPlugin(dependId, dependVersion, true);
+                } catch (PluginAlreadyInstalledException ignored) {
+                    // Warn if running a different version then what the dependency suggests
+                    String installedVersion = getInstallation(dependId).get().getVersion();
+                    if (!installedVersion.equals(dependVersion))
+                        sendMessage("Warning: This plugin depends on " + dependId + " v" + dependVersion + ", but you"
+                            + " already have v" + installedVersion + " installed. Your plugin may not run or "
+                            + "run as expected without it.");
+                } catch (PluginNotFoundException e) {
+                    sendMessage("Warning: Could not resolve dependency " + dependId + " v" + dependVersion + ", your "
+                        + "plugin may not run or run as expected without it.");
+                }
+            }
+        }
 
         // A plugin can be uninstalled but still loaded, download to updates
         // dir if this is the case
@@ -246,17 +287,17 @@ public final class SpongeOreClient implements OreClient {
 
     @Override
     public Optional<User> getUser(String username) throws IOException {
-        try {
-            return Optional.ofNullable(OreConnection.open(this, USER, username).read(User.class));
-        } catch (FileNotFoundException e) {
-            return Optional.empty();
-        }
+        return getModel(User.class, USER, username);
     }
 
     @Override
     public Optional<Project> getProject(String id) throws IOException {
+        return getModel(Project.class, PROJECT, id);
+    }
+
+    private <T> Optional<T> getModel(Class<T> clazz, String route, Object... params) throws IOException {
         try {
-            return Optional.ofNullable(OreConnection.open(this, PROJECT, id).read(Project.class));
+            return Optional.ofNullable(OreConnection.open(this, route, params).read(clazz));
         } catch (FileNotFoundException e) {
             return Optional.empty();
         }
@@ -302,6 +343,11 @@ public final class SpongeOreClient implements OreClient {
     private void checkInstalled(String id) throws PluginNotInstalledException {
         if (!isInstalled(id))
             throw new PluginNotInstalledException(id);
+    }
+
+    private void sendMessage(String msg) {
+        if (this.messenger != null)
+            this.messenger.deliverMessage(msg);
     }
 
     /**

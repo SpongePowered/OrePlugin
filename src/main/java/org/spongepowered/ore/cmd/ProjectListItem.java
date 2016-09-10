@@ -92,7 +92,8 @@ public final class ProjectListItem implements TextRepresentable {
     private void onInstallClick(CommandSource src) {
         this.plugin.newAsyncTask(TASK_NAME_DOWNLOAD, src, () -> {
             src.sendMessage(INSTALLING.apply(tuplePid(this.pluginId)).build());
-            this.client.installPlugin(this.pluginId, VERSION_RECOMMENDED);
+            boolean autoResolveEnabled = this.plugin.getConfig().getAutoResolveDependencies();
+            this.client.installPlugin(this.pluginId, VERSION_RECOMMENDED, autoResolveEnabled);
             src.sendMessage(DOWNLOAD_RESTART_SERVER.apply(ImmutableMap.of(
                 "pluginId", Text.of(this.pluginId),
                 "phase", Text.of("installation")

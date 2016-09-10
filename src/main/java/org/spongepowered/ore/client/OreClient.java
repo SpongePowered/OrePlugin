@@ -30,6 +30,13 @@ public interface OreClient {
     String VERSION_RECOMMENDED = "recommended";
 
     /**
+     * Sets the messenger to receive updates from the client.
+     *
+     * @param messenger Messenger to receive updates
+     */
+    void setMessenger(Messenger messenger);
+
+    /**
      * Returns the root URL of OrePlugin instance.
      *
      * @return Root URL
@@ -94,13 +101,15 @@ public interface OreClient {
      *
      * @param id Plugin ID
      * @param version Plugin version
+     * @param installDependencies True if the client should also install any
+     *        needed dependencies
      * @throws IOException
      * @throws PluginAlreadyInstalledException if a plugin with the specified
      *         ID is already installed
      * @throws PluginNotFoundException if a plugin with the specified ID
      *         cannot be found on Ore
      */
-    void installPlugin(String id, String version)
+    void installPlugin(String id, String version, boolean installDependencies)
         throws IOException, PluginAlreadyInstalledException, PluginNotFoundException;
 
     /**

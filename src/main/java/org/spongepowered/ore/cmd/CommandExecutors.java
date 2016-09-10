@@ -30,6 +30,8 @@ import static org.spongepowered.ore.Messages.YES;
 import static org.spongepowered.ore.Messages.listBuilder;
 import static org.spongepowered.ore.Messages.tuplePid;
 import static org.spongepowered.ore.client.SpongeOreClient.VERSION_RECOMMENDED;
+import static org.spongepowered.ore.cmd.CommandSpecs.FLAG_NO_DEPENDENCIES;
+import static org.spongepowered.ore.cmd.CommandSpecs.FLAG_WITH_DEPENDENCIES;
 
 import com.google.common.collect.ImmutableMap;
 import org.spongepowered.api.Game;
@@ -117,14 +119,21 @@ public final class CommandExecutors {
         String pluginId = context.<String>getOne("pluginId").get();
         String version = context.<String>getOne("version").orElse(VERSION_RECOMMENDED);
         src.sendMessage(INSTALLING.apply(tuplePid(pluginId)).build());
+
+        boolean autoResolveEnabled = this.plugin.getConfig().getAutoResolveDependencies();
+        boolean hasFlag = context.hasAny(FLAG_WITH_DEPENDENCIES);
+        boolean isNegated = context.hasAny(FLAG_NO_DEPENDENCIES);
+        boolean installDependencies = (hasFlag || autoResolveEnabled) && !isNegated;
+
         this.plugin.newAsyncTask(TASK_NAME_DOWNLOAD, src, () -> {
-            this.client.installPlugin(pluginId, version);
+            this.client.installPlugin(pluginId, version, installDependencies);
             src.sendMessage(DOWNLOAD_RESTART_SERVER.apply(ImmutableMap.of(
                 "pluginId", of(pluginId),
                 "phase", of("installation")
             )).build());
             return null;
         });
+
         return CommandResult.success();
     }
 
