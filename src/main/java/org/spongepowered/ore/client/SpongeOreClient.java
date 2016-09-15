@@ -12,10 +12,10 @@ import static org.spongepowered.ore.client.Routes.PROJECT_LIST;
 import static org.spongepowered.ore.client.Routes.USER;
 import static org.spongepowered.ore.client.Routes.VERSION;
 
-import org.apache.commons.io.FileUtils;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.plugin.PluginManager;
+import org.spongepowered.api.util.file.DeleteFileVisitor;
 import org.spongepowered.ore.OrePlugin;
 import org.spongepowered.ore.client.exception.NoUpdateAvailableException;
 import org.spongepowered.ore.client.exception.PluginAlreadyInstalledException;
@@ -33,6 +33,7 @@ import org.spongepowered.plugin.meta.PluginMetadata;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
@@ -256,7 +257,7 @@ public final class SpongeOreClient implements OreClient {
             move(updatePath, target);
         }
 
-        FileUtils.cleanDirectory(this.updatesDir.toFile());
+        Files.walkFileTree(this.updatesDir, DeleteFileVisitor.INSTANCE);
     }
 
     @Override
