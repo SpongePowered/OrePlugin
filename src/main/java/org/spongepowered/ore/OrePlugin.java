@@ -36,7 +36,6 @@ import javax.inject.Inject;
  */
 @Plugin(id = "ore",
         name = "Ore",
-        version = "1.0.0",
         description = "Official package manager for Sponge.",
         authors = { "windy" }
 )
