@@ -24,7 +24,6 @@ import static org.spongepowered.api.text.Text.of;
 import static org.spongepowered.api.text.format.TextColors.YELLOW;
 import static org.spongepowered.ore.Messages.*;
 import static org.spongepowered.ore.client.SpongeOreClient.VERSION_RECOMMENDED;
-import static org.spongepowered.ore.cmd.CommandSpecs.*;
 
 /**
  * Ore command executors.
@@ -99,7 +98,6 @@ public final class CommandExecutors {
         String cmd = this.confirmations.remove(src.getIdentifier());
         if (cmd == null)
             throw new CommandException(CONFIRM_NONE);
-        System.out.println("cmd = " + cmd);
         if (context.<String>getOne("choice").get().equalsIgnoreCase("yes"))
             this.game.getCommandManager().process(src, cmd);
         return CommandResult.success();
