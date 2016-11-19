@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'org.spongepowered'
-version = '1.0-SNAPSHOT'
+version = '1.0.0-SNAPSHOT'
 
 sponge.plugin.id = 'ore'
 

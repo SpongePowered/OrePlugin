@@ -12,15 +12,14 @@ import static org.spongepowered.ore.client.Routes.PROJECT_LIST;
 import static org.spongepowered.ore.client.Routes.USER;
 import static org.spongepowered.ore.client.Routes.VERSION;
 
+import org.spongepowered.api.Game;
+import org.spongepowered.api.Platform;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.plugin.PluginManager;
 import org.spongepowered.api.util.file.DeleteFileVisitor;
 import org.spongepowered.ore.OrePlugin;
-import org.spongepowered.ore.client.exception.NoUpdateAvailableException;
-import org.spongepowered.ore.client.exception.PluginAlreadyInstalledException;
-import org.spongepowered.ore.client.exception.PluginNotFoundException;
-import org.spongepowered.ore.client.exception.PluginNotInstalledException;
+import org.spongepowered.ore.client.exception.*;
 import org.spongepowered.ore.client.http.OreConnection;
 import org.spongepowered.ore.client.http.PluginDownload;
 import org.spongepowered.ore.client.model.Dependency;
@@ -36,14 +35,8 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * An implementation of {@link OreClient} built around the {@link Sponge}
@@ -51,6 +44,7 @@ import java.util.Set;
  */
 public final class SpongeOreClient implements OreClient {
 
+    private final Game game;
     private final PluginManager pluginManager;
     private final URL rootUrl;
     private final Path modsDir, updatesDir, downloadsDir;
@@ -61,13 +55,14 @@ public final class SpongeOreClient implements OreClient {
     private Messenger messenger;
 
     public SpongeOreClient(URL rootUrl, Path modsDir, Path updatesDir, Path downloadsDir,
-        Set<String> ignoredPlugins, PluginManager pluginManager) {
+        Set<String> ignoredPlugins, Game game) {
         this.rootUrl = rootUrl;
         this.modsDir = modsDir;
         this.updatesDir = updatesDir;
         this.downloadsDir = downloadsDir;
         this.ignoredPlugins = ignoredPlugins;
-        this.pluginManager = pluginManager;
+        this.game = game;
+        this.pluginManager = game.getPluginManager();
     }
 
     @Override
@@ -115,7 +110,7 @@ public final class SpongeOreClient implements OreClient {
     }
 
     @Override
-    public void installPlugin(String id, String version, boolean installDependencies)
+    public void installPlugin(String id, String version, boolean installDependencies, boolean ignorePlatformVersion)
         throws IOException, PluginAlreadyInstalledException, PluginNotFoundException {
         checkNotInstalled(id);
 
@@ -124,14 +119,65 @@ public final class SpongeOreClient implements OreClient {
             sendMessage("Finding dependencies...");
 
             String actualVersion = version;
-            if (version.equals(VERSION_RECOMMENDED))
+            if (version.equals(VERSION_RECOMMENDED)) {
                 actualVersion = getProject(id).orElseThrow(() -> new PluginNotFoundException(id))
-                    .getRecommendedVersion().getName();
+                        .getRecommendedVersion().getName();
+            }
 
             Version toInstall = getModel(Version.class, VERSION, id, actualVersion)
                 .orElseThrow(() -> new PluginNotFoundException(id));
 
-            for (Dependency depend : toInstall.getDependencies()) {
+            List<Dependency> dependencies = toInstall.getDependencies();
+
+            // Check API version
+            if (!ignorePlatformVersion) {
+                dependencies.stream().filter(d -> d.getPluginId().equals(Platform.API_ID)).findAny().ifPresent(api -> {
+                    String requiredApiVersion = api.getVersion();
+                    String currentApiVersion = this.game.getPlatform().getApi().getVersion()
+                            .orElseThrow(() -> new IllegalStateException("no API version found?"));
+                    int firstStopIndex = requiredApiVersion.indexOf(".");
+                    int currentStopIndex = currentApiVersion.indexOf(".");
+                    if (currentStopIndex == -1) {
+                        throw new IllegalStateException(
+                                "server running an implementation with an invalid version string? ("
+                                        + currentApiVersion + ")");
+                    }
+
+                    if (firstStopIndex == -1) {
+                        // The dependency on Ore supplied an invalid API version
+                        sendMessage("Warning: Plugin declared a dependency to a malformed API version string! ("
+                                + requiredApiVersion + ")");
+                        return;
+                    }
+
+                    int requiredMajor = -1;
+                    int currentMajor;
+                    try {
+                        requiredMajor = Integer.parseInt(requiredApiVersion.substring(0, firstStopIndex));
+                    } catch (NumberFormatException e) {
+                        sendMessage("Warning: Plugin declared a dependency to a API version with a non-integer major "
+                                + "version! (" + requiredApiVersion + ")");
+                    }
+
+                    if (requiredMajor != -1) {
+                        try {
+                            currentMajor = Integer.parseInt(currentApiVersion.substring(0, currentStopIndex));
+                        } catch (NumberFormatException e) {
+                            throw new IllegalStateException("server running an implementation with a version string "
+                                    + "with a non-integer major version? (" + currentApiVersion + ")");
+                        }
+
+                        if (currentMajor != requiredMajor)
+                            throw new UnsupportedPlatformVersion(requiredApiVersion, currentApiVersion);
+                    }
+                });
+            }
+
+            dependencies = dependencies.stream()
+                    .filter(d -> !d.getPluginId().equals(Platform.API_ID))
+                    .collect(Collectors.toCollection(ArrayList::new));
+
+            for (Dependency depend : dependencies) {
                 String dependId = depend.getPluginId();
                 String dependVersion = depend.getVersion();
                 sendMessage("Installing " + dependId + " v" + dependVersion + "...");
@@ -361,7 +407,7 @@ public final class SpongeOreClient implements OreClient {
         OreConfig config = plugin.getConfig();
         return new SpongeOreClient(
             config.getRepositoryUrl(), config.getInstallationDirectory(), config.getUpdatesDirectory(),
-            config.getDownloadsDirectory(), config.getIgnoredPlugins(), plugin.game.getPluginManager()
+            config.getDownloadsDirectory(), config.getIgnoredPlugins(), plugin.game
         );
     }
 

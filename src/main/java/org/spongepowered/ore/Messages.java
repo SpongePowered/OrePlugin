@@ -3,20 +3,16 @@ package org.spongepowered.ore;
 import static org.spongepowered.api.text.Text.NEW_LINE;
 import static org.spongepowered.api.text.TextTemplate.arg;
 import static org.spongepowered.api.text.TextTemplate.of;
-import static org.spongepowered.api.text.format.TextColors.BLUE;
-import static org.spongepowered.api.text.format.TextColors.GRAY;
-import static org.spongepowered.api.text.format.TextColors.GREEN;
-import static org.spongepowered.api.text.format.TextColors.RED;
-import static org.spongepowered.api.text.format.TextColors.YELLOW;
-import static org.spongepowered.api.text.format.TextStyles.BOLD;
-import static org.spongepowered.api.text.format.TextStyles.ITALIC;
-import static org.spongepowered.api.text.format.TextStyles.NONE;
+import static org.spongepowered.api.text.format.TextColors.*;
+import static org.spongepowered.api.text.format.TextStyles.*;
 
 import com.google.common.collect.ImmutableMap;
 import org.spongepowered.api.service.pagination.PaginationList;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.TextElement;
 import org.spongepowered.api.text.TextTemplate;
+import org.spongepowered.api.text.action.TextActions;
+import org.spongepowered.api.text.format.TextStyles;
 
 import java.util.Map;
 
@@ -26,7 +22,7 @@ import java.util.Map;
 public final class Messages {
 
     private static final TextTemplate.Arg PLUGIN_ID = arg("pluginId").color(GRAY).style(ITALIC).build();
-    private static final TextTemplate.Arg CONTENT = arg("content").color(GRAY).style(NONE).build();
+    private static final TextTemplate.Arg CONTENT = arg("content").color(GRAY).style(TextStyles.NONE).build();
 
     // Command descriptions
     public static final Text DESCRIPTION_INSTALL = Text.of("Installs a new plugin.");
@@ -39,6 +35,7 @@ public final class Messages {
     public static final Text DESCRIPTION_WHOIS = Text.of("Lists projects by the specified author.");
     public static final Text DESCRIPTION_SHOW = Text.of("Display information about a plugin.");
     public static final Text DESCRIPTION_DESCRIBE = Text.of("Displays the description of the plugin.");
+    public static final Text DESCRIPTION_CONFIRM = Text.of("Confirms some pending action.");
 
     // Messages
     public static final TextTemplate INSTALLING = of(YELLOW, "Installing plugin ", PLUGIN_ID, "...");
@@ -47,6 +44,7 @@ public final class Messages {
     public static final TextTemplate FINDING = of(YELLOW, "Finding ", PLUGIN_ID, "...");
     public static final TextTemplate PLUGIN_NOT_FOUND = of(RED, "Plugin ", PLUGIN_ID, " not found.");
     public static final TextTemplate DESCRIPTION = of(arg("description").color(YELLOW));
+    public static final TextTemplate CLIENT_MESSAGE = of(DARK_GREEN, "> ", arg("message"));
 
     public static final TextTemplate NAME = of(YELLOW, BOLD, "Name: ", CONTENT);
     public static final TextTemplate ID = of(YELLOW, BOLD, "ID: ", CONTENT);
@@ -82,6 +80,21 @@ public final class Messages {
 
     public static final TextTemplate USER_NOT_FOUND = of(
         RED, "User ", arg("username").color(GRAY).style(ITALIC), " not found.");
+
+    public static final TextTemplate UNSUPPORTED_PLATFORM_VERSION = of(
+        YELLOW, "This plugin requires a different major version of Sponge. ", NEW_LINE,
+        "The plugin may not work as expected if you choose to continue.", NEW_LINE,
+        "Required: ", arg("required").color(GREEN), NEW_LINE,
+        "Current: ", arg("current").color(RED), NEW_LINE,
+        "Install anyways?"
+    );
+
+    public static final Text CONFIRM_NONE = Text.of("Nothing to confirm!");
+    public static final Text CONFIRM = Text.of(
+        Text.builder("Yes").style(BOLD, UNDERLINE).color(GREEN).onClick(TextActions.runCommand("/ore confirm yes")),
+        " ",
+        Text.builder("No").style(BOLD, UNDERLINE).color(RED).onClick(TextActions.runCommand("/ore confirm no"))
+    );
 
     private Messages() {}
 

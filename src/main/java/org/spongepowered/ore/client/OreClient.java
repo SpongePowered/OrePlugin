@@ -1,10 +1,7 @@
 package org.spongepowered.ore.client;
 
 import org.spongepowered.api.plugin.PluginContainer;
-import org.spongepowered.ore.client.exception.NoUpdateAvailableException;
-import org.spongepowered.ore.client.exception.PluginAlreadyInstalledException;
-import org.spongepowered.ore.client.exception.PluginNotFoundException;
-import org.spongepowered.ore.client.exception.PluginNotInstalledException;
+import org.spongepowered.ore.client.exception.*;
 import org.spongepowered.ore.client.http.HttpUtils;
 import org.spongepowered.ore.client.model.Project;
 import org.spongepowered.ore.client.model.User;
@@ -103,14 +100,33 @@ public interface OreClient {
      * @param version Plugin version
      * @param installDependencies True if the client should also install any
      *        needed dependencies
+     * @param ignorePlatformVersion True if the client should ignore a mismatched platform API version
      * @throws IOException
      * @throws PluginAlreadyInstalledException if a plugin with the specified
      *         ID is already installed
      * @throws PluginNotFoundException if a plugin with the specified ID
      *         cannot be found on Ore
      */
-    void installPlugin(String id, String version, boolean installDependencies)
-        throws IOException, PluginAlreadyInstalledException, PluginNotFoundException;
+    void installPlugin(String id, String version, boolean installDependencies, boolean ignorePlatformVersion)
+        throws IOException, PluginAlreadyInstalledException, PluginNotFoundException, UnsupportedPlatformVersion;
+
+    /**
+     * Installs a plugin of the specified ID.
+     *
+     * @param id Plugin ID
+     * @param version Plugin version
+     * @param installDependencies True if the client should also install any
+     *        needed dependencies
+     * @throws IOException
+     * @throws PluginAlreadyInstalledException if a plugin with the specified
+     *         ID is already installed
+     * @throws PluginNotFoundException if a plugin with the specified ID
+     *         cannot be found on Ore
+     */
+    default void installPlugin(String id, String version, boolean installDependencies)
+            throws IOException, PluginAlreadyInstalledException, PluginNotFoundException, UnsupportedPlatformVersion {
+        installPlugin(id, version, installDependencies, false);
+    }
 
     /**
      * Uninstalls a plugin.

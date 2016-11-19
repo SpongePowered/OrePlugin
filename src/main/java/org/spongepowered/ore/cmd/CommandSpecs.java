@@ -8,16 +8,7 @@ import static org.spongepowered.api.command.args.GenericArguments.remainingJoine
 import static org.spongepowered.api.command.args.GenericArguments.seq;
 import static org.spongepowered.api.command.args.GenericArguments.string;
 import static org.spongepowered.api.text.Text.of;
-import static org.spongepowered.ore.Messages.DESCRIPTION_DESCRIBE;
-import static org.spongepowered.ore.Messages.DESCRIPTION_DOWNLOAD;
-import static org.spongepowered.ore.Messages.DESCRIPTION_INSTALL;
-import static org.spongepowered.ore.Messages.DESCRIPTION_RELOAD;
-import static org.spongepowered.ore.Messages.DESCRIPTION_SEARCH;
-import static org.spongepowered.ore.Messages.DESCRIPTION_SHOW;
-import static org.spongepowered.ore.Messages.DESCRIPTION_UNINSTALL;
-import static org.spongepowered.ore.Messages.DESCRIPTION_UPDATE;
-import static org.spongepowered.ore.Messages.DESCRIPTION_VERSION;
-import static org.spongepowered.ore.Messages.DESCRIPTION_WHOIS;
+import static org.spongepowered.ore.Messages.*;
 import static org.spongepowered.ore.Permissions.CMD_DESCRIBE;
 import static org.spongepowered.ore.Permissions.CMD_DOWNLOAD;
 import static org.spongepowered.ore.Permissions.CMD_INSTALL;
@@ -42,6 +33,7 @@ public class CommandSpecs {
     public static final String FLAG_CANCEL = "-cancel";
     public static final String FLAG_CATEGORIES = "-categories";
     public static final String FLAG_SORT = "-sort";
+    public static final String FLAG_IGNORE_PLATFORM_VERSION = "-ignorePlatformVersion";
 
     private final CommandSpec install;
     private final CommandSpec download;
@@ -51,6 +43,7 @@ public class CommandSpecs {
     private final CommandSpec whois;
     private final CommandSpec show;
     private final CommandSpec describe;
+    private final CommandSpec confirm;
     private final CommandSpec reload;
     private final CommandSpec version;
     private final CommandSpec root;
@@ -63,6 +56,7 @@ public class CommandSpecs {
                 .flag(FLAG_WITH_DEPENDENCIES)
                 .flag(FLAG_NO_DEPENDENCIES)
                 .flag(FLAG_CANCEL)
+                .flag(FLAG_IGNORE_PLATFORM_VERSION)
                 .buildWith(
                     seq(
                         onlyOne(string(of("pluginId"))),
@@ -128,6 +122,12 @@ public class CommandSpecs {
             .executor(cmds::describePlugin)
             .build();
 
+        this.confirm = CommandSpec.builder()
+            .description(DESCRIPTION_CONFIRM)
+            .arguments(onlyOne(string(of("choice"))))
+            .executor(cmds::confirm)
+            .build();
+
         this.reload = CommandSpec.builder()
             .permission(CMD_RELOAD)
             .description(DESCRIPTION_RELOAD)
@@ -152,6 +152,7 @@ public class CommandSpecs {
             .child(this.describe, "describe", "description")
             .child(this.search, "search", "find")
             .child(this.whois, "whois", "user", "author")
+            .child(this.confirm, "confirm")
             .child(this.reload, "reload", "refresh")
             .child(this.version, "version")
             .build();
@@ -187,6 +188,10 @@ public class CommandSpecs {
 
     public CommandSpec getWhoisSpec() {
         return this.whois;
+    }
+
+    public CommandSpec getConfirmSpec() {
+        return this.confirm;
     }
 
     public CommandSpec getReloadSpec() {

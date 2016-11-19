@@ -1,40 +1,8 @@
 package org.spongepowered.ore.cmd;
 
-import static org.spongepowered.api.text.Text.NEW_LINE;
-import static org.spongepowered.api.text.Text.of;
-import static org.spongepowered.api.text.format.TextColors.YELLOW;
-import static org.spongepowered.ore.Messages.AUTHOR;
-import static org.spongepowered.ore.Messages.CATEGORY;
-import static org.spongepowered.ore.Messages.DESCRIPTION;
-import static org.spongepowered.ore.Messages.DOWNLOADING;
-import static org.spongepowered.ore.Messages.DOWNLOAD_COMPLETE;
-import static org.spongepowered.ore.Messages.DOWNLOAD_RESTART_SERVER;
-import static org.spongepowered.ore.Messages.FINDING;
-import static org.spongepowered.ore.Messages.ID;
-import static org.spongepowered.ore.Messages.INSTALLED_VERSION;
-import static org.spongepowered.ore.Messages.INSTALLING;
-import static org.spongepowered.ore.Messages.LOADED;
-import static org.spongepowered.ore.Messages.LOCATION;
-import static org.spongepowered.ore.Messages.NAME;
-import static org.spongepowered.ore.Messages.NOT_INSTALLED;
-import static org.spongepowered.ore.Messages.NO_NEEDS_RESTART;
-import static org.spongepowered.ore.Messages.PLUGIN_NOT_FOUND;
-import static org.spongepowered.ore.Messages.RECOMMENDED_VERSION;
-import static org.spongepowered.ore.Messages.RELOAD_COMPLETE;
-import static org.spongepowered.ore.Messages.REMOVAL;
-import static org.spongepowered.ore.Messages.SEARCHING;
-import static org.spongepowered.ore.Messages.UPDATING;
-import static org.spongepowered.ore.Messages.USER_NOT_FOUND;
-import static org.spongepowered.ore.Messages.VERSION;
-import static org.spongepowered.ore.Messages.YES;
-import static org.spongepowered.ore.Messages.listBuilder;
-import static org.spongepowered.ore.Messages.tuplePid;
-import static org.spongepowered.ore.client.SpongeOreClient.VERSION_RECOMMENDED;
-import static org.spongepowered.ore.cmd.CommandSpecs.FLAG_NO_DEPENDENCIES;
-import static org.spongepowered.ore.cmd.CommandSpecs.FLAG_WITH_DEPENDENCIES;
-
 import com.google.common.collect.ImmutableMap;
 import org.spongepowered.api.Game;
+import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
@@ -42,11 +10,21 @@ import org.spongepowered.api.text.Text;
 import org.spongepowered.ore.OrePlugin;
 import org.spongepowered.ore.client.Installation;
 import org.spongepowered.ore.client.OreClient;
+import org.spongepowered.ore.client.exception.UnsupportedPlatformVersion;
 import org.spongepowered.ore.client.model.Project;
 import org.spongepowered.ore.client.model.User;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static org.spongepowered.api.text.Text.NEW_LINE;
+import static org.spongepowered.api.text.Text.of;
+import static org.spongepowered.api.text.format.TextColors.YELLOW;
+import static org.spongepowered.ore.Messages.*;
+import static org.spongepowered.ore.client.SpongeOreClient.VERSION_RECOMMENDED;
+import static org.spongepowered.ore.cmd.CommandSpecs.*;
 
 /**
  * Ore command executors.
@@ -58,6 +36,7 @@ public final class CommandExecutors {
     private final OrePlugin plugin;
     private final OreClient client;
     private final Game game;
+    private final Map<String, String> confirmations = new HashMap<>();
 
     /**
      * Constructs a new instance of the executors, ready for registration.
@@ -109,6 +88,24 @@ public final class CommandExecutors {
     }
 
     /**
+     * Acts as a proxy to run a command with confirmation.
+     *
+     * @param src source of command
+     * @param context CommandContext
+     * @return result of command
+     * @throws CommandException if there is no confirmation found
+     */
+    public CommandResult confirm(CommandSource src, CommandContext context) throws CommandException {
+        String cmd = this.confirmations.remove(src.getIdentifier());
+        if (cmd == null)
+            throw new CommandException(CONFIRM_NONE);
+        System.out.println("cmd = " + cmd);
+        if (context.<String>getOne("choice").get().equalsIgnoreCase("yes"))
+            this.game.getCommandManager().process(src, cmd);
+        return CommandResult.success();
+    }
+
+    /**
      * Downloads and installs a plugin.
      *
      * @param src source of command
@@ -121,12 +118,27 @@ public final class CommandExecutors {
         src.sendMessage(INSTALLING.apply(tuplePid(pluginId)).build());
 
         boolean autoResolveEnabled = this.plugin.getConfig().getAutoResolveDependencies();
-        boolean hasFlag = context.hasAny(FLAG_WITH_DEPENDENCIES);
-        boolean isNegated = context.hasAny(FLAG_NO_DEPENDENCIES);
+        boolean hasFlag = context.hasAny("withDependencies");
+        boolean isNegated = context.hasAny("noDependencies");
         boolean installDependencies = (hasFlag || autoResolveEnabled) && !isNegated;
+        boolean ignorePlatformVersion = context.hasAny("ignorePlatformVersion");
 
         this.plugin.newAsyncTask(TASK_NAME_DOWNLOAD, src, () -> {
-            this.client.installPlugin(pluginId, version, installDependencies);
+            this.client.setMessenger(msg -> src.sendMessage(CLIENT_MESSAGE
+                    .apply(ImmutableMap.of("message", msg)).build()));
+
+            try {
+                this.client.installPlugin(pluginId, version, installDependencies, ignorePlatformVersion);
+            } catch (UnsupportedPlatformVersion e) {
+                src.sendMessage(UNSUPPORTED_PLATFORM_VERSION, ImmutableMap.of(
+                    "required", of(e.getRequired()),
+                    "current", of(e.getCurrent())));
+                src.sendMessage(CONFIRM);
+                this.confirmations.put(src.getIdentifier(), "ore install --ignorePlatformVersion " + pluginId + " "
+                    + version);
+                return null;
+            }
+
             src.sendMessage(DOWNLOAD_RESTART_SERVER.apply(ImmutableMap.of(
                 "pluginId", of(pluginId),
                 "phase", of("installation")
