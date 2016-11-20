@@ -4,8 +4,6 @@ import ninja.leaping.configurate.ConfigurationNode;
 import org.spongepowered.ore.client.OreClient;
 import org.spongepowered.ore.config.OreConfig;
 
-import java.io.IOException;
-
 /**
  * Represents an installation of an {@link OreClient} on some server.
  */
@@ -21,9 +19,9 @@ public interface OrePlugin {
     /**
      * Loads (or reloads) the configuration file.
      *
-     * @throws IOException
+     * @return true if successful
      */
-    void loadConfig() throws IOException;
+    boolean loadConfig();
 
     /**
      * Returns the loaded {@link OreConfig} for this plugin.

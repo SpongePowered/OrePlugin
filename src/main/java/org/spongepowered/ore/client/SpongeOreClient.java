@@ -108,7 +108,6 @@ public final class SpongeOreClient implements OreClient {
 
     @Override
     public void downloadPlugin(String id, String version) throws IOException, PluginNotFoundException {
-        System.out.println("downloadsDir = " + this.downloadsDir);
         this.downloadPlugin(id, version, this.downloadsDir, null);
     }
 

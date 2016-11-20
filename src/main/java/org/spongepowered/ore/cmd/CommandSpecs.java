@@ -44,7 +44,6 @@ public final class CommandSpecs {
     private final CommandSpec show;
     private final CommandSpec describe;
     private final CommandSpec confirm;
-    private final CommandSpec reload;
     private final CommandSpec version;
     private final CommandSpec root;
 
@@ -128,12 +127,6 @@ public final class CommandSpecs {
             .executor(cmds::confirm)
             .build();
 
-        this.reload = CommandSpec.builder()
-            .permission(CMD_RELOAD)
-            .description(DESCRIPTION_RELOAD)
-            .executor(cmds::reloadConfig)
-            .build();
-
         this.version = CommandSpec.builder()
             .permission(CMD_VERSION)
             .description(DESCRIPTION_VERSION)
@@ -153,7 +146,6 @@ public final class CommandSpecs {
             .child(this.search, "search", "find")
             .child(this.whois, "whois", "user", "author")
             .child(this.confirm, "confirm")
-            .child(this.reload, "reload", "refresh")
             .child(this.version, "version")
             .build();
     }
@@ -192,10 +184,6 @@ public final class CommandSpecs {
 
     public CommandSpec getConfirmSpec() {
         return this.confirm;
-    }
-
-    public CommandSpec getReloadSpec() {
-        return this.reload;
     }
 
     public CommandSpec getVersionSpec() {

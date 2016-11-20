@@ -15,7 +15,6 @@ public final class PathTypeSerializer implements TypeSerializer<Path> {
 
     @Override
     public Path deserialize(TypeToken<?> type, ConfigurationNode value) throws ObjectMappingException {
-        System.out.println("deserializing " + value);
         return Paths.get(value.getString("."));
     }
 

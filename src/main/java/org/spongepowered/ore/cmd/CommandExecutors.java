@@ -3,6 +3,7 @@ package org.spongepowered.ore.cmd;
 import com.google.common.collect.ImmutableMap;
 import org.spongepowered.api.Game;
 import org.spongepowered.api.command.CommandException;
+import org.spongepowered.api.command.CommandManager;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
@@ -35,6 +36,7 @@ public final class CommandExecutors {
     private final SpongeOrePlugin plugin;
     private final OreClient client;
     private final Game game;
+    private final CommandManager commands;
     private final Map<String, String> confirmations = new HashMap<>();
 
     /**
@@ -46,13 +48,24 @@ public final class CommandExecutors {
         this.plugin = plugin;
         this.client = plugin.getClient();
         this.game = plugin.game;
+        this.commands = this.game.getCommandManager();
     }
 
     /**
      * Registers the executors with Sponge.
      */
-    public void register() {
-        this.game.getCommandManager().register(this.plugin, new CommandSpecs(this).getRootSpec(), "ore");
+    public CommandExecutors register() {
+        this.commands.register(this.plugin, new CommandSpecs(this).getRootSpec(), "ore");
+        return this;
+    }
+
+    /**
+     * Removes the root command mapping from Sponge.
+     */
+    public CommandExecutors deregister() {
+        this.commands.removeMapping(this.commands.get("ore")
+            .orElseThrow(() ->  new RuntimeException("no mapping found for ore command?")));
+        return this;
     }
 
     /**

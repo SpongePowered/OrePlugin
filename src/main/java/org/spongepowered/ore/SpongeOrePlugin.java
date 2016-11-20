@@ -15,6 +15,7 @@ import org.spongepowered.api.command.source.ConsoleSource;
 import org.spongepowered.api.config.DefaultConfig;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.Order;
+import org.spongepowered.api.event.game.GameReloadEvent;
 import org.spongepowered.api.event.game.state.GameStartedServerEvent;
 import org.spongepowered.api.event.game.state.GameStoppingEvent;
 import org.spongepowered.api.plugin.Plugin;
@@ -49,33 +50,61 @@ public final class SpongeOrePlugin implements OrePlugin {
 
     private OreClient client;
     private OreConfig config;
+    private CommandExecutors commands;
 
     @Listener(order = Order.POST)
-    public void onStart(GameStartedServerEvent event) throws IOException {
+    public void onStart(GameStartedServerEvent event) {
         this.log.info("Initializing...");
-        loadConfig();
-        this.client = SpongeOreClient.forPlugin(this);
-        if (this.client == null) {
-            this.log.error("Ore failed to initialize the client. Commands are unavailable.");
+        if (!init())
             return;
-        }
-        new CommandExecutors(this).register();
         checkForUpdates();
         this.log.info("Done.");
     }
 
+    @Listener
+    public void onReload(GameReloadEvent event) {
+        this.log.info("Reloading...");
+        this.commands.deregister();
+        this.commands = null;
+        this.client = null;
+        this.config = null;
+        if (!init())
+            return;
+        this.log.info("Done.");
+    }
+
+    private boolean init() {
+        if (!loadConfig())
+            return false;
+        this.client = SpongeOreClient.forPlugin(this);
+        if (this.client == null) {
+            this.log.error("Ore failed to initialize the client. Commands are unavailable.");
+            return false;
+        }
+        this.commands = new CommandExecutors(this).register();
+        return true;
+    }
+
     @Listener(order = Order.POST)
-    public void onStop(GameStoppingEvent event) throws IOException {
+    public void onStop(GameStoppingEvent event) {
         if (this.client.hasUninstalledUpdates()) {
             this.log.info("Applying " + this.client.getUninstalledUpdates() + " updates...");
-            this.client.installUpdates();
-            this.log.info("Done.");
+            try {
+                this.client.installUpdates();
+                this.log.info("Done.");
+            } catch (IOException e) {
+                this.log.error("An error occurred while applying downloaded updates.", e);
+            }
         }
 
         if (this.client.hasPendingUninstallations()) {
             this.log.info("Uninstalling " + this.client.getPendingUninstallations() + " plugins...");
-            this.client.completeUninstallations();
-            this.log.info("Done.");
+            try {
+                this.client.completeUninstallations();
+                this.log.info("Done.");
+            } catch (IOException e) {
+                this.log.error("An error occurred while completing pending uninstallations.", e);
+            }
         }
     }
 
@@ -85,8 +114,14 @@ public final class SpongeOrePlugin implements OrePlugin {
     }
 
     @Override
-    public void loadConfig() throws IOException {
-        this.config = new OreConfig().load(this.configPath, this.self.getAsset("default.conf").get());
+    public boolean loadConfig() {
+        try {
+            this.config = new OreConfig().load(this.configPath, this.self.getAsset("default.conf").get());
+            return true;
+        } catch (IOException e) {
+            this.log.error("Failed to load configuration. Commands are unavailable.", e);
+            return false;
+        }
     }
 
     @Override
