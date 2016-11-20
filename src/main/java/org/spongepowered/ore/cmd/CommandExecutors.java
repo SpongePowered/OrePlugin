@@ -7,12 +7,12 @@ import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.text.Text;
-import org.spongepowered.ore.OrePlugin;
+import org.spongepowered.ore.SpongeOrePlugin;
 import org.spongepowered.ore.client.Installation;
 import org.spongepowered.ore.client.OreClient;
 import org.spongepowered.ore.client.exception.UnsupportedPlatformVersion;
-import org.spongepowered.ore.client.model.Project;
-import org.spongepowered.ore.client.model.User;
+import org.spongepowered.ore.client.model.project.Project;
+import org.spongepowered.ore.client.model.user.User;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,7 +32,7 @@ public final class CommandExecutors {
 
     public static final String TASK_NAME_DOWNLOAD = "Ore Download";
     public static final String TASK_NAME_SEARCH = "Ore Search";
-    private final OrePlugin plugin;
+    private final SpongeOrePlugin plugin;
     private final OreClient client;
     private final Game game;
     private final Map<String, String> confirmations = new HashMap<>();
@@ -42,7 +42,7 @@ public final class CommandExecutors {
      *
      * @param plugin Ore plugin
      */
-    public CommandExecutors(OrePlugin plugin) {
+    public CommandExecutors(SpongeOrePlugin plugin) {
         this.plugin = plugin;
         this.client = plugin.getClient();
         this.game = plugin.game;
@@ -115,7 +115,7 @@ public final class CommandExecutors {
         String version = context.<String>getOne("version").orElse(VERSION_RECOMMENDED);
         src.sendMessage(INSTALLING.apply(tuplePid(pluginId)).build());
 
-        boolean autoResolveEnabled = this.plugin.getConfig().getAutoResolveDependencies();
+        boolean autoResolveEnabled = this.plugin.getConfigRoot().getNode("autoResolveDependencies").getBoolean();
         boolean hasFlag = context.hasAny("withDependencies");
         boolean isNegated = context.hasAny("noDependencies");
         boolean installDependencies = (hasFlag || autoResolveEnabled) && !isNegated;

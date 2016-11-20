@@ -46,14 +46,14 @@ public final class Messages {
     public static final TextTemplate DESCRIPTION = of(arg("description").color(YELLOW));
     public static final TextTemplate CLIENT_MESSAGE = of(DARK_GREEN, "> ", arg("message"));
 
-    public static final TextTemplate NAME = of(YELLOW, BOLD, "Name: ", CONTENT);
-    public static final TextTemplate ID = of(YELLOW, BOLD, "ID: ", CONTENT);
-    public static final TextTemplate AUTHOR = of(YELLOW, BOLD, "Author: ", CONTENT);
-    public static final TextTemplate CATEGORY = of(YELLOW, BOLD, "Category: ", CONTENT);
-    public static final TextTemplate INSTALLED_VERSION = of(YELLOW, BOLD, "Installed: ", CONTENT);
-    public static final TextTemplate RECOMMENDED_VERSION = of(YELLOW, BOLD, "Recommended: ", CONTENT);
-    public static final TextTemplate LOADED = of(YELLOW, BOLD, "Loaded: ", CONTENT);
-    public static final TextTemplate LOCATION = of(YELLOW, BOLD, "Location: ", CONTENT);
+    public static final TextTemplate NAME = of(YELLOW, "Name: ", CONTENT);
+    public static final TextTemplate ID = of(YELLOW, "ID: ", CONTENT);
+    public static final TextTemplate AUTHOR = of(YELLOW, "Author: ", CONTENT);
+    public static final TextTemplate CATEGORY = of(YELLOW, "Category: ", CONTENT);
+    public static final TextTemplate INSTALLED_VERSION = of(YELLOW, "Installed: ", CONTENT);
+    public static final TextTemplate RECOMMENDED_VERSION = of(YELLOW, "Recommended: ", CONTENT);
+    public static final TextTemplate LOADED = of(YELLOW, "Loaded: ", CONTENT);
+    public static final TextTemplate LOCATION = of(YELLOW, "Location: ", CONTENT);
 
     public static final Text NOT_INSTALLED = Text.of(RED, "Not installed");
     public static final Text YES = Text.of("Yes");
@@ -108,6 +108,12 @@ public final class Messages {
         return ImmutableMap.of("pluginId", Text.of(pluginId));
     }
 
+    /**
+     * Constructs a new {@link PaginationList.Builder}.
+     *
+     * @param title List title
+     * @return Builder
+     */
     public static PaginationList.Builder listBuilder(Text title) {
         return PaginationList.builder()
             .title(title)

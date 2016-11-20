@@ -8,7 +8,7 @@ import java.nio.file.Path;
 /**
  * Represents an unloaded plugin installation.
  */
-public class Installation {
+public final class Installation {
 
     private final String pluginId;
     private final String version;

@@ -3,8 +3,8 @@ package org.spongepowered.ore.client;
 import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.ore.client.exception.*;
 import org.spongepowered.ore.client.http.HttpUtils;
-import org.spongepowered.ore.client.model.Project;
-import org.spongepowered.ore.client.model.User;
+import org.spongepowered.ore.client.model.project.Project;
+import org.spongepowered.ore.client.model.user.User;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -17,7 +17,7 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 
 /**
- * A client for interacting with the OrePlugin web server.
+ * A client for interacting with the SpongeOrePlugin web server.
  */
 public interface OreClient {
 
@@ -34,7 +34,7 @@ public interface OreClient {
     void setMessenger(Messenger messenger);
 
     /**
-     * Returns the root URL of OrePlugin instance.
+     * Returns the root URL of SpongeOrePlugin instance.
      *
      * @return Root URL
      */
@@ -43,7 +43,7 @@ public interface OreClient {
     /**
      * Returns the full URL of the specified route.
      *
-     * @param route OrePlugin route
+     * @param route SpongeOrePlugin route
      * @param queryString Query string to append to URL
      * @param params Format parameters
      * @return Full URL
@@ -60,7 +60,7 @@ public interface OreClient {
     /**
      * Returns the full URL of the specified route.
      *
-     * @param route OrePlugin route
+     * @param route SpongeOrePlugin route
      * @param params Format parameters
      * @return Full URL
      */

@@ -24,10 +24,10 @@ import com.google.common.collect.ImmutableMap;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.TextRepresentable;
-import org.spongepowered.ore.OrePlugin;
+import org.spongepowered.ore.SpongeOrePlugin;
 import org.spongepowered.ore.client.OreClient;
 import org.spongepowered.ore.client.exception.PluginNotInstalledException;
-import org.spongepowered.ore.client.model.Project;
+import org.spongepowered.ore.client.model.project.Project;
 
 import java.io.IOException;
 
@@ -37,13 +37,13 @@ import java.io.IOException;
  */
 public final class ProjectListItem implements TextRepresentable {
 
-    final OrePlugin plugin;
+    final SpongeOrePlugin plugin;
     final OreClient client;
     final Project project;
     final String pluginId;
     final Text text;
 
-    ProjectListItem(OrePlugin plugin, Project project) throws IOException, PluginNotInstalledException {
+    ProjectListItem(SpongeOrePlugin plugin, Project project) throws IOException, PluginNotInstalledException {
         this.plugin = plugin;
         this.client = plugin.getClient();
         this.project = project;
@@ -92,7 +92,7 @@ public final class ProjectListItem implements TextRepresentable {
     private void onInstallClick(CommandSource src) {
         this.plugin.newAsyncTask(TASK_NAME_DOWNLOAD, src, () -> {
             src.sendMessage(INSTALLING.apply(tuplePid(this.pluginId)).build());
-            boolean autoResolveEnabled = this.plugin.getConfig().getAutoResolveDependencies();
+            boolean autoResolveEnabled = this.plugin.getConfigRoot().getNode("autoResolveDependencies").getBoolean();
             this.client.installPlugin(this.pluginId, VERSION_RECOMMENDED, autoResolveEnabled);
             src.sendMessage(DOWNLOAD_RESTART_SERVER.apply(ImmutableMap.of(
                 "pluginId", Text.of(this.pluginId),
@@ -137,7 +137,7 @@ public final class ProjectListItem implements TextRepresentable {
      * @throws IOException
      * @throws PluginNotInstalledException
      */
-    public static ProjectListItem of(OrePlugin plugin, Project project)
+    public static ProjectListItem of(SpongeOrePlugin plugin, Project project)
         throws IOException, PluginNotInstalledException {
         return new ProjectListItem(plugin, project);
     }

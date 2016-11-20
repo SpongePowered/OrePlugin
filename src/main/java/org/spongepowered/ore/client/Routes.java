@@ -1,7 +1,7 @@
 package org.spongepowered.ore.client;
 
 /**
- * Collection of routes used by OrePlugin.
+ * Collection of routes used by SpongeOrePlugin.
  */
 public final class Routes {
 

@@ -1,120 +1,82 @@
 package org.spongepowered.ore.config;
 
-import static java.nio.file.Files.createDirectories;
-import static java.nio.file.Files.createFile;
-import static java.nio.file.Files.newInputStream;
-import static java.nio.file.Files.notExists;
-import static java.nio.file.Files.write;
-
-import com.google.common.collect.ImmutableSet;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.google.common.reflect.TypeToken;
+import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.ConfigurationOptions;
+import ninja.leaping.configurate.commented.CommentedConfigurationNode;
+import ninja.leaping.configurate.hocon.HoconConfigurationLoader;
+import ninja.leaping.configurate.loader.ConfigurationLoader;
+import ninja.leaping.configurate.objectmapping.serialize.TypeSerializerCollection;
+import ninja.leaping.configurate.objectmapping.serialize.TypeSerializers;
+import org.spongepowered.api.asset.Asset;
 
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+
+import static java.nio.file.Files.*;
 
 /**
- * Ore configuration options.
+ * Handles configuration management for the plugin.
  */
-@SuppressWarnings("FieldCanBeLocal")
 public final class OreConfig {
 
-    private static final Gson GSON = new GsonBuilder()
-        .setPrettyPrinting()
-        .registerTypeHierarchyAdapter(Path.class, new PathTypeAdapter())
-        .registerTypeAdapter(URL.class, new UrlTypeAdapter())
-        .create();
+    private static final TypeSerializerCollection serializers = TypeSerializers.getDefaultSerializers().newChild();
+    private static ConfigurationOptions options = ConfigurationOptions.defaults();
 
-    private URL repositoryUrl = new URL("https://ore-staging.spongepowered.org");
-    private Path installationDirectory = Paths.get("mods").toAbsolutePath();
-    private Path updatesDirectory = Paths.get("updates").toAbsolutePath();
-    private Path downloadsDirectory = Paths.get("downloads").toAbsolutePath();
-    private boolean autoResolveDependencies = true;
-    private List<String> ignoredPlugins = Arrays.asList("Minecraft", "mcp", "FML", "Forge", "sponge", "ore");
-
-    private OreConfig() throws MalformedURLException {}
-
-    /**
-     * Returns the location of the Ore server instance to use.
-     *
-     * @return Ore instance location
-     */
-    public URL getRepositoryUrl() {
-        return this.repositoryUrl;
+    static {
+        serializers.registerType(TypeToken.of(Path.class), new PathTypeSerializer());
+        options = options.setSerializers(serializers);
     }
 
-    /**
-     * Returns the directory in which mods/plugins are kept.
-     *
-     * @return Mods directory
-     */
-    public Path getInstallationDirectory() {
-        return this.installationDirectory;
-    }
+    private ConfigurationNode root;
 
     /**
-     * Returns the directory in which Ore should store downloaded updates
-     * temporarily.
-     *
-     * @return Updates directory
-     */
-    public Path getUpdatesDirectory() {
-        return this.updatesDirectory;
-    }
-
-    /**
-     * Returns the directory in which Ore should store plugin downloads that are not to
-     * be installed.
-     *
-     * @return Downloads directory
-     */
-    public Path getDownloadsDirectory() {
-        return this.downloadsDirectory;
-    }
-
-    /**
-     * Returns true if plugin dependencies should be automatically resolved
-     * when updating or installing.
-     *
-     * @return True if should automatically resolve dependencies
-     */
-    public boolean getAutoResolveDependencies() {
-        return this.autoResolveDependencies;
-    }
-
-    /**
-     * Returns a list of plugin IDs which should be ignored by Ore.
-     *
-     * @return Plugins to ignore
-     */
-    public Set<String> getIgnoredPlugins() {
-        return ImmutableSet.copyOf(this.ignoredPlugins);
-    }
-
-    /**
-     * Loads a new {@link OreConfig} from disk at the specified {@link Path} or
-     * creates one if none exists.
+     * Loads the config into a root node at the specified {@link Path} with
+     * the specified {@link Asset} default config.
      *
      * @param path Path to load from
-     * @return Newly loaded OreConfig
+     * @param defaultConfig Default config
+     * @return This instance
      * @throws IOException
      */
-    public static OreConfig load(Path path) throws IOException {
+    public OreConfig load(Path path, Asset defaultConfig) throws IOException {
+        if (notExists(path)) {
+            createDirectories(path.getParent());
+            defaultConfig.copyToFile(path);
+        }
+        this.root = createLoader(path).load();
+        return this;
+    }
+
+    /**
+     * Saves the root node at the specified {@link Path}.
+     *
+     * @param path Path to save to
+     * @return This instance
+     * @throws IOException
+     */
+    public OreConfig save(Path path) throws IOException {
         if (notExists(path)) {
             createDirectories(path.getParent());
             createFile(path);
-            OreConfig defaultConfig = new OreConfig();
-            write(path, (GSON.toJson(defaultConfig) + '\n').getBytes());
-            return defaultConfig;
         }
-        return GSON.fromJson(new InputStreamReader(newInputStream(path)), OreConfig.class);
+        createLoader(path).save(this.root);
+        return this;
+    }
+
+    private ConfigurationLoader<CommentedConfigurationNode> createLoader(Path path) {
+        return HoconConfigurationLoader.builder().setPath(path).setDefaultOptions(options).build();
+    }
+
+    /**
+     * Returns the root {@link ConfigurationNode} of thie config.
+     *
+     * @return Root node
+     */
+    public ConfigurationNode getRoot() {
+        if (this.root == null)
+            throw new IllegalStateException("config not loaded");
+        return this.root;
     }
 
 }

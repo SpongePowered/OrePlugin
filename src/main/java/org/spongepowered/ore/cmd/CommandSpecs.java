@@ -26,7 +26,7 @@ import org.spongepowered.api.command.spec.CommandSpec;
 /**
  * Collection of {@link CommandSpec}s used by Ore.
  */
-public class CommandSpecs {
+public final class CommandSpecs {
 
     public static final String FLAG_WITH_DEPENDENCIES = "-withDependencies";
     public static final String FLAG_NO_DEPENDENCIES = "-noDependencies";

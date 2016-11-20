@@ -1,6 +1,10 @@
 package org.spongepowered.ore.client.exception;
 
-public class UnsupportedPlatformVersion extends OreException {
+/**
+ * Exception thrown when a requested plugin does not support the current
+ * platform API version that the server is currently running.
+ */
+public final class UnsupportedPlatformVersion extends OreException {
 
     private final String required;
     private final String current;
@@ -11,10 +15,20 @@ public class UnsupportedPlatformVersion extends OreException {
         this.current = current;
     }
 
+    /**
+     * Returns the required version string.
+     *
+     * @return Required version string
+     */
     public String getRequired() {
         return required;
     }
 
+    /**
+     * Returns the server's current version string.
+     *
+     * @return Current version string.
+     */
     public String getCurrent() {
         return current;
     }

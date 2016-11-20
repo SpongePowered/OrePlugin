@@ -12,21 +12,23 @@ import static org.spongepowered.ore.client.Routes.PROJECT_LIST;
 import static org.spongepowered.ore.client.Routes.USER;
 import static org.spongepowered.ore.client.Routes.VERSION;
 
+import com.google.common.reflect.TypeToken;
+import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import org.spongepowered.api.Game;
 import org.spongepowered.api.Platform;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.plugin.PluginManager;
 import org.spongepowered.api.util.file.DeleteFileVisitor;
-import org.spongepowered.ore.OrePlugin;
+import org.spongepowered.ore.SpongeOrePlugin;
 import org.spongepowered.ore.client.exception.*;
 import org.spongepowered.ore.client.http.OreConnection;
 import org.spongepowered.ore.client.http.PluginDownload;
-import org.spongepowered.ore.client.model.Dependency;
-import org.spongepowered.ore.client.model.Project;
-import org.spongepowered.ore.client.model.User;
-import org.spongepowered.ore.client.model.Version;
-import org.spongepowered.ore.config.OreConfig;
+import org.spongepowered.ore.client.model.project.Dependency;
+import org.spongepowered.ore.client.model.project.Project;
+import org.spongepowered.ore.client.model.user.User;
+import org.spongepowered.ore.client.model.project.Version;
 import org.spongepowered.plugin.meta.PluginMetadata;
 
 import java.io.FileNotFoundException;
@@ -106,6 +108,7 @@ public final class SpongeOreClient implements OreClient {
 
     @Override
     public void downloadPlugin(String id, String version) throws IOException, PluginNotFoundException {
+        System.out.println("downloadsDir = " + this.downloadsDir);
         this.downloadPlugin(id, version, this.downloadsDir, null);
     }
 
@@ -403,12 +406,21 @@ public final class SpongeOreClient implements OreClient {
      * @param plugin Plugin to create client for
      * @return New client
      */
-    public static SpongeOreClient forPlugin(OrePlugin plugin) {
-        OreConfig config = plugin.getConfig();
-        return new SpongeOreClient(
-            config.getRepositoryUrl(), config.getInstallationDirectory(), config.getUpdatesDirectory(),
-            config.getDownloadsDirectory(), config.getIgnoredPlugins(), plugin.game
-        );
+    public static SpongeOreClient forPlugin(SpongeOrePlugin plugin) {
+        ConfigurationNode config = plugin.getConfigRoot();
+        final TypeToken<Path> PATH_TOKEN = TypeToken.of(Path.class);
+        try {
+            return new SpongeOreClient(
+                config.getNode("repositoryUrl").getValue(TypeToken.of(URL.class)),
+                config.getNode("installationDirectory").getValue(PATH_TOKEN),
+                config.getNode("updatesDirectory").getValue(PATH_TOKEN),
+                config.getNode("downloadsDirectory").getValue(PATH_TOKEN),
+                new HashSet<>(config.getNode("ignoredPlugins").getList(TypeToken.of(String.class))),
+                plugin.game);
+        } catch (ObjectMappingException e) {
+            plugin.log.error("A fatal error occurred while loading your Ore client settings.", e);
+            return null;
+        }
     }
 
 }

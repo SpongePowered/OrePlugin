@@ -32,7 +32,6 @@ public final class HttpUtils {
                 if (j < parts.length - 1)
                     newQuery.append('=');
             }
-
             if (i < params.length - 1)
                 newQuery.append('&');
         }

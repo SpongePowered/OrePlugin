@@ -1,6 +1,7 @@
-package org.spongepowered.ore.client.model;
+package org.spongepowered.ore.client.model.user;
 
 import com.google.common.base.Objects;
+import org.spongepowered.ore.client.model.project.Project;
 
 import java.util.List;
 

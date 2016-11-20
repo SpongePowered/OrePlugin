@@ -1,4 +1,4 @@
-package org.spongepowered.ore.client.model;
+package org.spongepowered.ore.client.model.project;
 
 import static org.spongepowered.api.text.format.TextColors.GRAY;
 import static org.spongepowered.api.text.format.TextColors.YELLOW;
@@ -8,6 +8,7 @@ import com.google.gson.annotations.SerializedName;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.TextRepresentable;
 import org.spongepowered.ore.client.OreClient;
+import org.spongepowered.ore.client.model.user.ProjectMember;
 
 import java.net.MalformedURLException;
 import java.net.URL;

@@ -1,13 +1,14 @@
-package org.spongepowered.ore.client.model;
+package org.spongepowered.ore.client.model.user;
 
 import com.google.gson.annotations.SerializedName;
+import org.spongepowered.ore.client.model.project.Project;
 
 import java.util.List;
 
 /**
  * Represents an Ore user.
  */
-public class User {
+public final class User {
 
     private int id;
     private String createdAt;

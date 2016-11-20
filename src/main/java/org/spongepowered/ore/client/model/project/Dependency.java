@@ -1,10 +1,10 @@
-package org.spongepowered.ore.client.model;
+package org.spongepowered.ore.client.model.project;
 
 /**
  * Represents a {@link Project} {@link Version}'s dependency to another Project
  * Version.
  */
-public class Dependency {
+public final class Dependency {
 
     private String pluginId;
     private String version;
