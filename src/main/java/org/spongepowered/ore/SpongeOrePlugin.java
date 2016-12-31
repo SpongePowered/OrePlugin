@@ -36,11 +36,7 @@ import javax.inject.Inject;
 /**
  * Main plugin class for Ore.
  */
-@Plugin(id = "ore",
-        name = "Ore",
-        description = "Official package manager for Sponge.",
-        authors = { "windy" }
-)
+@Plugin(id = "ore", authors = { "windy" })
 public final class SpongeOrePlugin implements OrePlugin {
 
     @Inject public Logger log;

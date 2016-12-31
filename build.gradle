@@ -5,6 +5,14 @@ plugins {
 group = 'org.spongepowered'
 version = '1.1.0-SNAPSHOT'
 
+sponge.plugin {
+    id = 'ore'
+    meta {
+        name = 'Ore'
+        description = 'Official package manager for Sponge.'
+    }
+}
+
 sponge.plugin.id = 'ore'
 
 dependencies {
